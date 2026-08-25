@@ -1,0 +1,61 @@
+version: '3.8'
+
+services:
+  spaceship-station:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: spaceship-station
+    ports:
+      - "8000:8000"
+    environment:
+      MOCK_MODE: "false"  # Set to "true" for testing without live Docker
+      OLLAMA_HOST: "http://ollama:11434"  # Link to Ollama container if available
+      QBITTORRENT_HOST: "http://qbittorrent:8080"  # Link to qBittorrent
+      LOG_LEVEL: "info"
+      BROADCAST_INTERVAL: "2.0"
+    volumes:
+      # Mount Docker socket for live container monitoring
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      
+      # Mount media directories for file browsing
+      - /mnt/media:/media:ro                    # Jellyfin/Komga media
+      - /mnt/downloads:/downloads:ro            # qBittorrent downloads
+      - /mnt/torrents:/torrents:ro              # Torrent staging area
+      
+      # Mount AI tools directory for persistence
+      - spaceship-tools:/app/ai_core/tools
+    
+    networks:
+      - ghostworld
+    
+    restart: unless-stopped
+    
+    depends_on:
+      - qbittorrent  # Optional: adjust based on your stack
+      
+    labels:
+      - "com.example.description=Spaceship Station Visualizer"
+
+  # Optional: Ollama service for AI features
+  # ollama:
+  #   image: ollama/ollama:latest
+  #   container_name: ollama
+  #   ports:
+  #     - "11434:11434"
+  #   volumes:
+  #     - ollama-data:/root/.ollama
+  #   networks:
+  #     - ghostworld
+  #   restart: unless-stopped
+
+networks:
+  ghostworld:
+    external: true  # Connect to your existing ghostworld network
+
+volumes:
+  spaceship-tools:
+    driver: local
+  
+  # ollama-data:
+  #   driver: local

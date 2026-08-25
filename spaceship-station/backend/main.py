@@ -1,0 +1,392 @@
+"""
+Spaceship Station Visualizer Backend
+FastAPI server with WebSocket streaming for real-time metrics and container status.
+"""
+
+import asyncio
+import json
+import os
+from datetime import datetime
+from typing import Set, Dict, Any
+from contextlib import asynccontextmanager
+
+from fastapi import FastAPI, WebSocket, WebSocketDisconnect, HTTPException
+from fastapi.responses import FileResponse
+from fastapi.staticfiles import StaticFiles
+from fastapi.middleware.cors import CORSMiddleware
+import uvicorn
+
+from collectors.docker_agent import DockerAgent
+from collectors.system import SystemCollector
+from collectors.torrent_agent import TorrentAgent
+from collectors.file_browser import FileBrowserAgent
+from ai_core.agent_gateway import AIAgentGateway
+
+
+# ============================================================================
+# Configuration & Initialization
+# ============================================================================
+
+MOCK_MODE = os.getenv("MOCK_MODE", "true").lower() == "true"
+BROADCAST_INTERVAL = 2.0  # Seconds between metric broadcasts
+
+docker_agent = DockerAgent(mock_mode=MOCK_MODE)
+system_collector = SystemCollector()
+torrent_agent = TorrentAgent(mock_mode=MOCK_MODE)
+file_browser = FileBrowserAgent(mock_mode=MOCK_MODE)
+ai_gateway = AIAgentGateway()
+
+# Track active WebSocket connections for broadcasting
+active_connections: Set[WebSocket] = set()
+
+
+async def broadcast_metrics():
+    """Continuously broadcast metrics to all connected clients."""
+    while True:
+        try:
+            await asyncio.sleep(BROADCAST_INTERVAL)
+            
+            # Collect all metrics
+            containers = docker_agent.get_containers()
+            system_metrics = system_collector.get_all_metrics()
+            torrent_stats = torrent_agent.get_transfer_stats()
+            
+            # Build payload
+            payload = {
+                "type": "metrics_update",
+                "timestamp": datetime.now().isoformat(),
+                "containers": containers,
+                "system": system_metrics,
+                "torrents": torrent_stats,
+                "ai_status": {
+                    "model": ai_gateway.model,
+                    "tools_available": ai_gateway.get_tool_status(),
+                },
+            }
+            
+            # Broadcast to all connected clients
+            disconnected = set()
+            for connection in active_connections:
+                try:
+                    await connection.send_json(payload)
+                except Exception as e:
+                    print(f"Error broadcasting to client: {e}")
+                    disconnected.add(connection)
+            
+            # Clean up disconnected clients
+            for connection in disconnected:
+                active_connections.discard(connection)
+        
+        except Exception as e:
+            print(f"Broadcast error: {e}")
+
+
+async def start_background_tasks():
+    """Start background task for metric broadcasting."""
+    asyncio.create_task(broadcast_metrics())
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Lifespan context manager for app startup/shutdown."""
+    print(f"Starting Spaceship Station Visualizer (MOCK_MODE={MOCK_MODE})")
+    await start_background_tasks()
+    yield
+    print("Shutting down Spaceship Station Visualizer")
+    active_connections.clear()
+
+
+# ============================================================================
+# FastAPI Application
+# ============================================================================
+
+app = FastAPI(
+    title="Spaceship Station Visualizer",
+    description="Real-time homelab monitoring as an isometric spaceship",
+    version="0.1.0",
+    lifespan=lifespan,
+)
+
+# CORS middleware
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+
+# ============================================================================
+# REST API Endpoints
+# ============================================================================
+
+@app.get("/api/health")
+async def health_check():
+    """Health check endpoint."""
+    return {
+        "status": "online",
+        "mock_mode": MOCK_MODE,
+        "timestamp": datetime.now().isoformat(),
+    }
+
+
+@app.get("/api/containers")
+async def get_containers():
+    """Get current container status and metrics."""
+    return {
+        "containers": docker_agent.get_containers(),
+        "timestamp": datetime.now().isoformat(),
+    }
+
+
+@app.get("/api/containers/{container_name}/logs")
+async def get_container_logs(container_name: str, tail: int = 50):
+    """Get recent logs from a container."""
+    logs = docker_agent.get_container_logs(container_name, tail=tail)
+    return {
+        "container": container_name,
+        "logs": logs,
+        "timestamp": datetime.now().isoformat(),
+    }
+
+
+@app.post("/api/containers/{container_name}/restart")
+async def restart_container(container_name: str):
+    """Request container restart."""
+    success = docker_agent.restart_container(container_name)
+    return {
+        "container": container_name,
+        "action": "restart",
+        "success": success,
+        "timestamp": datetime.now().isoformat(),
+    }
+
+
+@app.get("/api/system")
+async def get_system_metrics():
+    """Get current system-wide metrics."""
+    return {
+        "metrics": system_collector.get_all_metrics(),
+        "timestamp": datetime.now().isoformat(),
+    }
+
+
+@app.get("/api/torrents")
+async def get_torrents():
+    """Get active torrent status."""
+    return {
+        "torrents": torrent_agent.get_transfer_stats(),
+        "timestamp": datetime.now().isoformat(),
+    }
+
+
+@app.get("/api/torrents/detailed")
+async def get_torrents_detailed():
+    """Get detailed torrent information by category."""
+    return {
+        "detail": torrent_agent.get_torrents_by_category(),
+        "timestamp": datetime.now().isoformat(),
+    }
+
+
+@app.get("/api/torrents/{torrent_hash}")
+async def get_torrent_details(torrent_hash: str):
+    """Get detailed information about a specific torrent."""
+    result = torrent_agent.get_torrent_details(torrent_hash)
+    return {
+        "result": result,
+        "timestamp": datetime.now().isoformat(),
+    }
+
+
+# ============================================================================
+# File Browser Endpoints (Media Pool & Downloads)
+# ============================================================================
+
+@app.get("/api/media/pools")
+async def get_media_pools():
+    """Get available media pools and their statistics."""
+    return {
+        "pools": file_browser.get_pools(),
+        "timestamp": datetime.now().isoformat(),
+    }
+
+
+@app.get("/api/media/browse")
+async def browse_media(pool: str, path: str = ""):
+    """Browse a directory in a media pool."""
+    result = file_browser.browse_directory(pool, path)
+    return {
+        "result": result,
+        "timestamp": datetime.now().isoformat(),
+    }
+
+
+@app.get("/api/media/file-info")
+async def get_file_info(pool: str, path: str):
+    """Get detailed information about a file."""
+    result = file_browser.get_file_info(pool, path)
+    return {
+        "result": result,
+        "timestamp": datetime.now().isoformat(),
+    }
+
+
+@app.get("/api/media/search")
+async def search_media(pool: str, query: str, max_results: int = 50):
+    """Search for files in a pool."""
+    result = file_browser.search_files(pool, query, max_results)
+    return {
+        "result": result,
+        "timestamp": datetime.now().isoformat(),
+    }
+
+
+@app.get("/api/media/types")
+async def get_media_types(pool: str):
+    """Get breakdown of file types in a pool."""
+    result = file_browser.get_media_types(pool)
+    return {
+        "result": result,
+        "timestamp": datetime.now().isoformat(),
+    }
+
+
+@app.post("/api/ai/query")
+async def query_ai(request: Dict[str, Any]):
+    """Query the AI agent with optional context."""
+    prompt = request.get("prompt", "Status report")
+    include_context = request.get("include_context", False)
+    
+    context = None
+    if include_context:
+        context = {
+            "containers": [{"name": c["name"], "state": c["state"]} 
+                          for c in docker_agent.get_containers()],
+            "system": system_collector.get_all_metrics(),
+        }
+    
+    response = ai_gateway.query_agent(prompt, context)
+    return {
+        "prompt": prompt,
+        "response": response,
+        "timestamp": datetime.now().isoformat(),
+    }
+
+
+@app.get("/api/ai/models")
+async def get_ai_models():
+    """List available AI models."""
+    return {
+        "available_models": ai_gateway.list_available_models(),
+        "current_model": ai_gateway.model,
+    }
+
+
+@app.post("/api/ai/tool/generate")
+async def generate_ai_tool(request: Dict[str, Any]):
+    """Generate a new AI tool."""
+    tool_spec = request.get("tool_spec", {})
+    success = ai_gateway.generate_tool(tool_spec)
+    return {
+        "tool_name": tool_spec.get("name", "unknown"),
+        "success": success,
+        "timestamp": datetime.now().isoformat(),
+    }
+
+
+@app.get("/api/ai/tools")
+async def get_ai_tools():
+    """Get status of all AI tools."""
+    return ai_gateway.get_tool_status()
+
+
+@app.post("/api/ai/tool/{tool_name}/execute")
+async def execute_ai_tool(tool_name: str, request: Dict[str, Any]):
+    """Execute a generated AI tool."""
+    args = request.get("args", {})
+    result = ai_gateway.execute_tool(tool_name, args)
+    return {
+        "tool_name": tool_name,
+        "result": result,
+        "timestamp": datetime.now().isoformat(),
+    }
+
+
+# ============================================================================
+# WebSocket Endpoint
+# ============================================================================
+
+@app.websocket("/ws")
+async def websocket_endpoint(websocket: WebSocket):
+    """WebSocket endpoint for real-time metrics streaming."""
+    await websocket.accept()
+    active_connections.add(websocket)
+    
+    print(f"Client connected. Total connections: {len(active_connections)}")
+    
+    try:
+        # Keep connection alive
+        while True:
+            # Wait for client messages (optional keepalive, close commands, etc.)
+            data = await asyncio.wait_for(websocket.receive_text(), timeout=60.0)
+            
+            # Handle commands from client
+            try:
+                message = json.loads(data)
+                command = message.get("type")
+                
+                if command == "ping":
+                    await websocket.send_json({"type": "pong"})
+                elif command == "restart_container":
+                    container_name = message.get("container")
+                    success = docker_agent.restart_container(container_name)
+                    await websocket.send_json({
+                        "type": "container_restart_result",
+                        "container": container_name,
+                        "success": success,
+                    })
+            except json.JSONDecodeError:
+                pass
+    
+    except asyncio.TimeoutError:
+        print("WebSocket timeout (client inactive)")
+    except WebSocketDisconnect:
+        print("Client disconnected")
+    finally:
+        active_connections.discard(websocket)
+        print(f"Client removed. Total connections: {len(active_connections)}")
+
+
+# ============================================================================
+# Static Files
+# ============================================================================
+
+# Serve frontend assets
+frontend_path = os.path.join(os.path.dirname(__file__), "..", "frontend")
+if os.path.exists(frontend_path):
+    app.mount("/static", StaticFiles(directory=os.path.join(frontend_path, "assets")), name="static")
+
+
+@app.get("/")
+async def root():
+    """Serve main HTML file."""
+    index_path = os.path.join(frontend_path, "index.html")
+    if os.path.exists(index_path):
+        return FileResponse(index_path)
+    else:
+        return {"message": "Spaceship Station Visualizer API is running"}
+
+
+# ============================================================================
+# Main Entry Point
+# ============================================================================
+
+if __name__ == "__main__":
+    uvicorn.run(
+        app,
+        host="0.0.0.0",
+        port=8000,
+        log_level="info",
+    )
