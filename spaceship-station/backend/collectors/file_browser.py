@@ -15,12 +15,22 @@ class FileBrowserAgent:
     def __init__(self, mock_mode: bool = False, media_dir: str = "/media", install_dir: str = "/app"):
         """Initialize file browser with configurable paths."""
         self.mock_mode = mock_mode
-        # Map friendly names to actual mount paths (configurable)
+        # Default pools - can be updated via update_pools()
         self.pools = {
-            "media": media_dir,
-            "downloads": f"{install_dir}/downloads",
+            "movies": f"{media_dir}/movies",
+            "tv": f"{media_dir}/tv",
             "torrents": f"{install_dir}/torrents",
+            "downloads": f"{install_dir}/downloads",
+            "roms": f"{media_dir}/roms",
+            "ebooks": f"{media_dir}/ebooks",
         }
+    
+    def update_pools(self, pool_config: Dict[str, Dict[str, Any]]):
+        """Update pools from configuration."""
+        self.pools = {}
+        for pool_name, config in pool_config.items():
+            if config.get("enabled", True):
+                self.pools[pool_name] = config.get("path", "")
     
     def get_pools(self) -> Dict[str, Dict[str, Any]]:
         """Get available media pools and their stats."""

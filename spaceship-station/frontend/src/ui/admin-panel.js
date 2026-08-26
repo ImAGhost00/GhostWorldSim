@@ -18,6 +18,8 @@ class AdminPanel {
         try {
             const response = await fetch('/api/config/get');
             this.config = await response.json();
+            const poolsResponse = await fetch('/api/config/media-pools');
+            this.mediaPools = await poolsResponse.json();
             this.renderPanel();
         } catch (error) {
             console.error('Failed to load config:', error);
@@ -41,6 +43,9 @@ class AdminPanel {
                     <button onclick="adminPanel.switchTab('services')" 
                         class="admin-tab px-3 py-2 text-sm font-semibold text-amber-400 border-b-2 border-amber-400" 
                         data-tab="services">🔌 Services</button>
+                    <button onclick="adminPanel.switchTab('media-pools')" 
+                        class="admin-tab px-3 py-2 text-sm font-semibold text-slate-400 border-b-2 border-transparent hover:text-slate-200" 
+                        data-tab="media-pools">📁 Media Pools</button>
                     <button onclick="adminPanel.switchTab('settings')" 
                         class="admin-tab px-3 py-2 text-sm font-semibold text-slate-400 border-b-2 border-transparent hover:text-slate-200" 
                         data-tab="settings">⚙️ Settings</button>
@@ -82,6 +87,9 @@ class AdminPanel {
         switch(this.activeTab) {
             case 'services':
                 content.innerHTML = this.renderServices();
+                break;
+            case 'media-pools':
+                content.innerHTML = this.renderMediaPools();
                 break;
             case 'settings':
                 content.innerHTML = this.renderSettings();
@@ -169,6 +177,67 @@ class AdminPanel {
                     class="w-full px-4 py-2 bg-amber-600 hover:bg-amber-700 rounded font-semibold">
                     💾 Save All Services
                 </button>
+            </div>
+        `;
+    }
+
+    renderMediaPools() {
+        const pools = this.mediaPools?.pools || {};
+        
+        return `
+            <div class="space-y-4">
+                <div class="text-xs text-slate-400 mb-4">
+                    Configure media library pools. Add custom directories for roms, ebooks, movies, TV shows, torrents, etc.
+                </div>
+
+                <!-- Existing Pools -->
+                <div class="space-y-2">
+                    ${Object.entries(pools).map(([name, config]) => `
+                        <div class="pool-item p-3 bg-slate-800 rounded border border-slate-700">
+                            <div class="flex justify-between items-start mb-2">
+                                <div>
+                                    <div class="font-semibold text-amber-400">${name}</div>
+                                    <div class="text-xs text-slate-400 mt-1">Type: ${config.type}</div>
+                                    <div class="text-xs text-slate-500 mt-1 font-mono">${config.path}</div>
+                                </div>
+                                <button class="pool-delete text-red-400 hover:text-red-300 text-sm" data-pool="${name}">
+                                    Remove
+                                </button>
+                            </div>
+                            <label class="flex items-center gap-2 text-xs">
+                                <input type="checkbox" class="pool-enable" data-pool="${name}" 
+                                    ${config.enabled ? 'checked' : ''}>
+                                <span>Enabled</span>
+                            </label>
+                        </div>
+                    `).join('')}
+                </div>
+
+                <!-- Add New Pool -->
+                <div class="p-4 bg-slate-800 rounded border border-slate-700 mt-6">
+                    <h3 class="font-semibold text-sky-300 mb-3">+ Add New Pool</h3>
+                    <div class="space-y-2">
+                        <input type="text" id="poolName" 
+                            placeholder="Pool name (e.g., roms, ebooks, movies)" 
+                            class="w-full px-2 py-1 bg-slate-700 border border-slate-600 rounded text-xs text-sky-300">
+                        <input type="text" id="poolPath" 
+                            placeholder="Full path (e.g., /media/roms or /mnt/ebooks)" 
+                            class="w-full px-2 py-1 bg-slate-700 border border-slate-600 rounded text-xs text-sky-300">
+                        <select id="poolType" class="w-full px-2 py-1 bg-slate-700 border border-slate-600 rounded text-xs text-sky-300">
+                            <option value="media">Media</option>
+                            <option value="roms">ROMs</option>
+                            <option value="ebooks">eBooks</option>
+                            <option value="movies">Movies</option>
+                            <option value="tv">TV Shows</option>
+                            <option value="torrents">Torrents</option>
+                            <option value="downloads">Downloads</option>
+                            <option value="custom">Custom</option>
+                        </select>
+                        <button id="addPoolBtn" class="w-full px-3 py-2 bg-sky-700 hover:bg-sky-600 rounded text-xs font-semibold text-sky-100">
+                            ➕ Create Pool
+                        </button>
+                    </div>
+                </div>
             </div>
         `;
     }
@@ -359,7 +428,107 @@ class AdminPanel {
     }
 
     attachEventListeners() {
-        // Event listeners are attached inline via onclick attributes
+        // Media Pool event listeners
+        if (this.activeTab === 'media-pools') {
+            // Add new pool
+            const addBtn = document.getElementById('addPoolBtn');
+            if (addBtn) {
+                addBtn.addEventListener('click', () => this.addMediaPool());
+            }
+
+            // Delete pool
+            document.querySelectorAll('.pool-delete').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    const poolName = e.target.dataset.pool;
+                    if (confirm(`Delete pool "${poolName}"?`)) {
+                        this.deleteMediaPool(poolName);
+                    }
+                });
+            });
+
+            // Toggle pool enabled
+            document.querySelectorAll('.pool-enable').forEach(checkbox => {
+                checkbox.addEventListener('change', async (e) => {
+                    const poolName = e.target.dataset.pool;
+                    const enabled = e.target.checked;
+                    await this.updateMediaPool(poolName, { enabled });
+                });
+            });
+        }
+    }
+
+    async addMediaPool() {
+        const name = document.getElementById('poolName').value.trim();
+        const path = document.getElementById('poolPath').value.trim();
+        const type = document.getElementById('poolType').value;
+
+        if (!name || !path) {
+            alert('Please fill in pool name and path');
+            return;
+        }
+
+        try {
+            const response = await fetch('/api/config/media-pool/add', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ name, path, type })
+            });
+
+            const result = await response.json();
+            if (response.ok) {
+                alert(`Pool "${name}" created!`);
+                // Reload config
+                await this.loadConfig();
+            } else {
+                alert(`Error: ${result.message}`);
+            }
+        } catch (error) {
+            console.error('Failed to add pool:', error);
+            alert('Failed to add pool');
+        }
+    }
+
+    async deleteMediaPool(poolName) {
+        try {
+            const response = await fetch('/api/config/media-pool/delete', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ name: poolName })
+            });
+
+            const result = await response.json();
+            if (response.ok) {
+                alert(`Pool "${poolName}" deleted!`);
+                // Reload config
+                await this.loadConfig();
+            } else {
+                alert(`Error: ${result.message}`);
+            }
+        } catch (error) {
+            console.error('Failed to delete pool:', error);
+            alert('Failed to delete pool');
+        }
+    }
+
+    async updateMediaPool(poolName, updates) {
+        try {
+            const response = await fetch('/api/config/media-pool/update', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ name: poolName, updates })
+            });
+
+            const result = await response.json();
+            if (!response.ok) {
+                alert(`Error: ${result.message}`);
+                // Reload config to revert
+                await this.loadConfig();
+            }
+        } catch (error) {
+            console.error('Failed to update pool:', error);
+            // Reload config to revert
+            await this.loadConfig();
+        }
     }
 }
 

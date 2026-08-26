@@ -60,6 +60,37 @@ discord_bot = DiscordBotManager()
 # Track active WebSocket connections for broadcasting
 active_connections: Set[WebSocket] = set()
 
+# Define CONFIG after agents are initialized
+CONFIG = {
+    "services": {
+        "jellyfin": {"api_key": "", "url": "", "enabled": False},
+        "sonarr": {"api_key": "", "url": "", "enabled": False},
+        "radarr": {"api_key": "", "url": "", "enabled": False},
+        "prowlarr": {"api_key": "", "url": "", "enabled": False},
+        "qbittorrent": {"username": "", "password": "", "url": "", "enabled": False},
+        "discord": {"bot_token": "", "enabled": False},
+        "ollama": {"url": "", "model": "", "enabled": False},
+    },
+    "media_pools": {
+        "movies": {"path": f"{MEDIA_DIRECTORY}/movies", "type": "movies", "enabled": True},
+        "tv": {"path": f"{MEDIA_DIRECTORY}/tv", "type": "tv", "enabled": True},
+        "torrents": {"path": f"{INSTALL_DIRECTORY}/torrents", "type": "torrents", "enabled": True},
+        "downloads": {"path": f"{INSTALL_DIRECTORY}/downloads", "type": "downloads", "enabled": True},
+        "roms": {"path": f"{MEDIA_DIRECTORY}/roms", "type": "roms", "enabled": False},
+        "ebooks": {"path": f"{MEDIA_DIRECTORY}/ebooks", "type": "ebooks", "enabled": False},
+    },
+    "settings": {
+        "theme": "dark",
+        "grid_size": "12x12",
+        "update_interval": 2.0,
+        "show_grid_labels": True,
+        "notification_level": "warnings",
+    }
+}
+
+# Initialize file browser with configured pools
+file_browser.update_pools(CONFIG["media_pools"])
+
 
 async def broadcast_metrics():
     """Continuously broadcast metrics to all connected clients."""
@@ -542,28 +573,8 @@ async def root():
 
 
 # ============================================================================
-# Configuration Management
+# Configuration Management Endpoints
 # ============================================================================
-
-CONFIG = {
-    "services": {
-        "jellyfin": {"api_key": "", "url": "", "enabled": False},
-        "sonarr": {"api_key": "", "url": "", "enabled": False},
-        "radarr": {"api_key": "", "url": "", "enabled": False},
-        "prowlarr": {"api_key": "", "url": "", "enabled": False},
-        "qbittorrent": {"username": "", "password": "", "url": "", "enabled": False},
-        "discord": {"bot_token": "", "enabled": False},
-        "ollama": {"url": "", "model": "", "enabled": False},
-    },
-    "settings": {
-        "theme": "dark",
-        "grid_size": "12x12",
-        "update_interval": 2.0,
-        "show_grid_labels": True,
-        "notification_level": "warnings",
-    }
-}
-
 
 @app.get("/api/config/get")
 async def get_config():
@@ -573,6 +584,7 @@ async def get_config():
             k: {**v, "api_key": "***" if v.get("api_key") else "", "bot_token": "***" if v.get("bot_token") else "", "password": "***" if v.get("password") else ""}
             for k, v in CONFIG["services"].items()
         },
+        "media_pools": CONFIG["media_pools"],
         "settings": CONFIG["settings"],
         "timestamp": datetime.now().isoformat(),
     }
@@ -725,6 +737,92 @@ async def validate_service(request: Dict[str, Any]):
             "valid": False,
             "message": f"Error: {str(e)[:100]}",
         }
+
+
+# ============================================================================
+# Media Pool Configuration Endpoints
+# ============================================================================
+
+@app.get("/api/config/media-pools")
+async def get_media_pools():
+    """Get all configured media pools."""
+    return {
+        "pools": CONFIG["media_pools"],
+        "timestamp": datetime.now().isoformat(),
+    }
+
+
+@app.post("/api/config/media-pool/add")
+async def add_media_pool(request: Dict[str, Any]):
+    """Add a new media pool."""
+    pool_name = request.get("name", "").strip()
+    pool_path = request.get("path", "").strip()
+    pool_type = request.get("type", "media")
+    
+    if not pool_name or not pool_path:
+        return {"status": "error", "message": "Name and path required"}, 400
+    
+    if pool_name in CONFIG["media_pools"]:
+        return {"status": "error", "message": f"Pool '{pool_name}' already exists"}, 400
+    
+    CONFIG["media_pools"][pool_name] = {
+        "path": pool_path,
+        "type": pool_type,
+        "enabled": True,
+    }
+    
+    # Update file browser with new pools
+    file_browser.update_pools(CONFIG["media_pools"])
+    
+    return {
+        "status": "created",
+        "pool_name": pool_name,
+        "pool": CONFIG["media_pools"][pool_name],
+        "timestamp": datetime.now().isoformat(),
+    }
+
+
+@app.post("/api/config/media-pool/update")
+async def update_media_pool(request: Dict[str, Any]):
+    """Update an existing media pool."""
+    pool_name = request.get("name", "").strip()
+    updates = request.get("updates", {})
+    
+    if not pool_name or pool_name not in CONFIG["media_pools"]:
+        return {"status": "error", "message": f"Pool '{pool_name}' not found"}, 400
+    
+    CONFIG["media_pools"][pool_name].update(updates)
+    
+    # Update file browser with new pools
+    file_browser.update_pools(CONFIG["media_pools"])
+    
+    return {
+        "status": "updated",
+        "pool_name": pool_name,
+        "pool": CONFIG["media_pools"][pool_name],
+        "timestamp": datetime.now().isoformat(),
+    }
+
+
+@app.post("/api/config/media-pool/delete")
+async def delete_media_pool(request: Dict[str, Any]):
+    """Delete a media pool."""
+    pool_name = request.get("name", "").strip()
+    
+    if not pool_name or pool_name not in CONFIG["media_pools"]:
+        return {"status": "error", "message": f"Pool '{pool_name}' not found"}, 400
+    
+    deleted = CONFIG["media_pools"].pop(pool_name)
+    
+    # Update file browser with new pools
+    file_browser.update_pools(CONFIG["media_pools"])
+    
+    return {
+        "status": "deleted",
+        "pool_name": pool_name,
+        "pool": deleted,
+        "timestamp": datetime.now().isoformat(),
+    }
 
 
 # ============================================================================
