@@ -21,7 +21,7 @@ logger = logging.getLogger(__name__)
 class DiscordBotManager:
     """Manage Discord bot for server control and notifications."""
     
-    def __init__(self, token: Optional[str] = None, intents: Optional[discord.Intents] = None):
+    def __init__(self, token: Optional[str] = None, intents: Optional[Any] = None):
         """Initialize Discord bot."""
         self.token = token or os.getenv("DISCORD_BOT_TOKEN")
         self.enabled = DISCORD_AVAILABLE and bool(self.token)
