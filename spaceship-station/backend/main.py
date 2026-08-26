@@ -3,9 +3,8 @@ Spaceship Station Visualizer Backend
 FastAPI server with WebSocket streaming for real-time metrics and container status.
 """
 
+import requests
 import asyncio
-import json
-import os
 from datetime import datetime
 from typing import Set, Dict, Any
 from contextlib import asynccontextmanager
@@ -563,23 +562,123 @@ async def update_config(request: Dict[str, Any]):
 
 @app.post("/api/config/validate-service")
 async def validate_service(request: Dict[str, Any]):
-    """Validate service connectivity."""
+    """Validate service connectivity by testing actual connection."""
     service_name = request.get("service", "")
     config = request.get("config", {})
     
-    # Mock validation - in production, test actual connection
     if not config:
         return {"service": service_name, "valid": False, "message": "No configuration provided"}
     
-    # Simple presence check
-    has_required = all([config.get("url") or config.get("api_key")])
+    try:
+        # Service-specific validation
+        if service_name == "jellyfin":
+            if not config.get("url"):
+                return {"service": service_name, "valid": False, "message": "URL required"}
+            url = f"{config['url'].rstrip('/')}/api/system/info"
+            headers = {"X-MediaBrowser-Token": config.get("api_key", "")} if config.get("api_key") else {}
+            response = requests.get(url, headers=headers, timeout=5)
+            return {
+                "service": service_name,
+                "valid": response.status_code in [200, 401],  # 401 means auth needed but server exists
+                "message": "Connected!" if response.status_code == 200 else "Server found (auth required)",
+                "status_code": response.status_code,
+            }
+        
+        elif service_name == "sonarr" or service_name == "radarr":
+            if not config.get("url") or not config.get("api_key"):
+                return {"service": service_name, "valid": False, "message": "URL and API key required"}
+            url = f"{config['url'].rstrip('/')}/api/v3/system/status"
+            headers = {"X-Api-Key": config.get("api_key", "")}
+            response = requests.get(url, headers=headers, timeout=5)
+            return {
+                "service": service_name,
+                "valid": response.status_code == 200,
+                "message": "Connected!" if response.status_code == 200 else f"Failed: {response.status_code}",
+                "status_code": response.status_code,
+            }
+        
+        elif service_name == "prowlarr":
+            if not config.get("url") or not config.get("api_key"):
+                return {"service": service_name, "valid": False, "message": "URL and API key required"}
+            url = f"{config['url'].rstrip('/')}/api/v1/health"
+            headers = {"X-Api-Key": config.get("api_key", "")}
+            response = requests.get(url, headers=headers, timeout=5)
+            return {
+                "service": service_name,
+                "valid": response.status_code == 200,
+                "message": "Connected!" if response.status_code == 200 else f"Failed: {response.status_code}",
+                "status_code": response.status_code,
+            }
+        
+        elif service_name == "qbittorrent":
+            if not config.get("url"):
+                return {"service": service_name, "valid": False, "message": "URL required"}
+            # Try to login and get app version
+            session = requests.Session()
+            login_url = f"{config['url'].rstrip('/')}/api/v2/auth/login"
+            username = config.get("username", "")
+            password = config.get("password", "")
+            login_data = {"username": username, "password": password}
+            response = session.post(login_url, data=login_data, timeout=5)
+            return {
+                "service": service_name,
+                "valid": response.status_code in [200, 403],  # 403 means server up but wrong creds
+                "message": "Connected!" if response.status_code == 200 else "Server found (auth required)",
+                "status_code": response.status_code,
+            }
+        
+        elif service_name == "discord":
+            if not config.get("bot_token"):
+                return {"service": service_name, "valid": False, "message": "Bot token required"}
+            # Just check token format (can't validate without making Discord API call)
+            token = config.get("bot_token", "")
+            if len(token) > 20 and "." in token:
+                return {
+                    "service": service_name,
+                    "valid": True,
+                    "message": "Token format valid (full test requires network call)",
+                }
+            return {"service": service_name, "valid": False, "message": "Invalid token format"}
+        
+        elif service_name == "ollama":
+            if not config.get("url"):
+                return {"service": service_name, "valid": False, "message": "URL required"}
+            url = f"{config['url'].rstrip('/')}/api/tags"
+            response = requests.get(url, timeout=5)
+            return {
+                "service": service_name,
+                "valid": response.status_code == 200,
+                "message": "Connected!" if response.status_code == 200 else f"Failed: {response.status_code}",
+                "status_code": response.status_code,
+            }
+        
+        else:
+            # Generic validation for unknown services
+            has_required = bool(config.get("url") or config.get("api_key"))
+            return {
+                "service": service_name,
+                "valid": has_required,
+                "message": "Configuration looks valid" if has_required else "Missing required fields",
+            }
     
-    return {
-        "service": service_name,
-        "valid": has_required,
-        "message": "Configuration looks valid" if has_required else "Missing required fields",
-        "timestamp": datetime.now().isoformat(),
-    }
+    except requests.Timeout:
+        return {
+            "service": service_name,
+            "valid": False,
+            "message": "Connection timeout - service may be unreachable",
+        }
+    except requests.ConnectionError as e:
+        return {
+            "service": service_name,
+            "valid": False,
+            "message": f"Connection failed: {str(e)[:50]}",
+        }
+    except Exception as e:
+        return {
+            "service": service_name,
+            "valid": False,
+            "message": f"Error: {str(e)[:100]}",
+        }
 
 
 # ============================================================================

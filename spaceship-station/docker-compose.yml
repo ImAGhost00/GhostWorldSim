@@ -13,8 +13,6 @@ services:
       MOCK_MODE: "true"  # Switch to "false" once real services are mapped
       ENABLE_AI: "false"  # AI disabled (insufficient VRAM)
       DEBUG: "true"  # Enable debug logging
-      OLLAMA_HOST: "http://ollama:11434"  # Link to Ollama container if available
-      QBITTORRENT_HOST: "http://qbittorrent:8080"  # Link to qBittorrent
       LOG_LEVEL: "debug"  # Verbose logging for troubleshooting
       BROADCAST_INTERVAL: "2.0"
     volumes:
