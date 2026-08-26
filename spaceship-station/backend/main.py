@@ -64,16 +64,18 @@ async def broadcast_metrics():
             torrent_stats = torrent_agent.get_transfer_stats()
             
             # Build payload
+            ai_status = {
+                "model": ai_gateway.model if ai_gateway else None,
+                "tools_available": ai_gateway.get_tool_status() if ai_gateway else [],
+                "enabled": ai_gateway is not None,
+            }
             payload = {
                 "type": "metrics_update",
                 "timestamp": datetime.now().isoformat(),
                 "containers": containers,
                 "system": system_metrics,
                 "torrents": torrent_stats,
-                "ai_status": {
-                    "model": ai_gateway.model,
-                    "tools_available": ai_gateway.get_tool_status(),
-                },
+                "ai_status": ai_status,
             }
             
             # Broadcast to all connected clients
@@ -473,7 +475,7 @@ async def websocket_endpoint(websocket: WebSocket):
 # ============================================================================
 
 # Serve frontend assets
-frontend_path = os.path.join(os.path.dirname(__file__), "..", "frontend")
+frontend_path = os.path.join(os.path.dirname(__file__), "frontend")
 if os.path.exists(frontend_path):
     app.mount("/static", StaticFiles(directory=os.path.join(frontend_path, "assets")), name="static")
 
