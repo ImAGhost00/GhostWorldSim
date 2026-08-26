@@ -10,19 +10,27 @@ services:
     ports:
       - "4420:8000"
     environment:
+      # Core Settings
       MOCK_MODE: "true"  # Switch to "false" once real services are mapped
       ENABLE_AI: "false"  # AI disabled (insufficient VRAM)
       DEBUG: "true"  # Enable debug logging
       LOG_LEVEL: "debug"  # Verbose logging for troubleshooting
-      BROADCAST_INTERVAL: "2.0"
       
-      # Optional: System environment (customize for your setup)
-      # PUID: "1000"                    # User ID for file permissions
-      # PGID: "1000"                    # Group ID for file permissions
-      # TZ: "America/New_York"          # Timezone
-      # MEDIA_DIRECTORY: "/media"       # Path to media pool
-      # INSTALL_DIRECTORY: "/opt/yams"  # Installation directory
-      # MEDIA_SERVICE: "jellyfin"       # Default media service
+      # Admin Authentication
+      ADMIN_PASSWORD: "changeme"  # CHANGE THIS! Set your admin password here
+      
+      # Broadcast & Update Settings
+      BROADCAST_INTERVAL: "2.0"  # Seconds between metric broadcasts
+      
+      # System Environment (customize for your setup)
+      PUID: "1000"                    # User ID for file permissions
+      PGID: "1000"                    # Group ID for file permissions
+      TZ: "America/New_York"          # Timezone
+      
+      # Media & Storage Paths
+      MEDIA_DIRECTORY: "/media"       # Path to media pool (movies, tv, etc)
+      INSTALL_DIRECTORY: "/opt/yams"  # Installation directory for downloads/torrents
+      MEDIA_SERVICE: "jellyfin"       # Default media service
     volumes:
       # Mount Docker socket for live container monitoring
       - /var/run/docker.sock:/var/run/docker.sock:ro

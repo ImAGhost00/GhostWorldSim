@@ -49,6 +49,7 @@ MEDIA_SERVICE = os.getenv("MEDIA_SERVICE", "jellyfin")
 MOCK_MODE = os.getenv("MOCK_MODE", "true").lower() == "true"
 ENABLE_AI = os.getenv("ENABLE_AI", "false").lower() == "true"
 BROADCAST_INTERVAL = float(os.getenv("BROADCAST_INTERVAL", "2.0"))
+ADMIN_PASSWORD = os.getenv("ADMIN_PASSWORD", "")
 
 docker_agent = DockerAgent(mock_mode=MOCK_MODE)
 system_collector = SystemCollector()
@@ -184,6 +185,23 @@ async def health_check():
         "ai_enabled": ENABLE_AI and AI_AVAILABLE,
         "discord_enabled": discord_bot.enabled,
         "timestamp": datetime.now().isoformat(),
+    }
+
+
+@app.post("/api/auth/validate")
+async def validate_auth(request: Dict[str, Any]):
+    """Validate admin password."""
+    provided_password = request.get("password", "")
+    
+    # If no password is set, allow access
+    if not ADMIN_PASSWORD:
+        return {"authenticated": True, "message": "No password required"}
+    
+    # Check if password matches
+    is_valid = provided_password == ADMIN_PASSWORD
+    return {
+        "authenticated": is_valid,
+        "message": "Access granted" if is_valid else "Invalid password",
     }
 
 

@@ -538,11 +538,41 @@ let adminPanel = null;
 function openAdminPanel() {
     const overlay = document.getElementById('adminOverlay');
     const panel = document.getElementById('adminPanel');
-    if (overlay) overlay.classList.add('visible');
-    if (panel) panel.classList.add('open');
     
-    if (!adminPanel) {
-        adminPanel = new AdminPanel();
+    // Show password prompt if not yet authenticated
+    if (!window.adminAuthenticated) {
+        const password = prompt("Enter admin password:");
+        if (password === null) return; // User cancelled
+        
+        // Validate password
+        fetch('/api/auth/validate', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ password })
+        })
+        .then(r => r.json())
+        .then(data => {
+            if (data.authenticated) {
+                window.adminAuthenticated = true;
+                if (overlay) overlay.classList.add('visible');
+                if (panel) panel.classList.add('open');
+                
+                if (!adminPanel) {
+                    adminPanel = new AdminPanel();
+                }
+            } else {
+                alert("Invalid password");
+            }
+        })
+        .catch(err => alert("Authentication failed"));
+    } else {
+        // Already authenticated
+        if (overlay) overlay.classList.add('visible');
+        if (panel) panel.classList.add('open');
+        
+        if (!adminPanel) {
+            adminPanel = new AdminPanel();
+        }
     }
 }
 
