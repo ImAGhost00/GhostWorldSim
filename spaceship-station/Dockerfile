@@ -13,6 +13,7 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 # Copy application
 COPY backend/ .
+COPY frontend/ ./frontend/
 
 # Create directories for AI tools
 RUN mkdir -p ai_core/tools
