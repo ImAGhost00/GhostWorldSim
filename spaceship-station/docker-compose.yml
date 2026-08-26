@@ -2,14 +2,15 @@ version: '3.8'
 
 services:
   spaceship-station:
-    build:
-      context: .
-      dockerfile: Dockerfile
+    # Use pre-built image from GitHub Container Registry
+    image: ghcr.io/imaghost00/ghostworldsim:latest
     container_name: spaceship-station
+    pull_policy: always  # Always pull latest image
     ports:
       - "0420:8000"
     environment:
       MOCK_MODE: "false"  # Set to "true" for testing without live Docker
+      ENABLE_AI: "false"  # AI disabled (insufficient VRAM)
       OLLAMA_HOST: "http://ollama:11434"  # Link to Ollama container if available
       QBITTORRENT_HOST: "http://qbittorrent:8080"  # Link to qBittorrent
       LOG_LEVEL: "info"
@@ -31,11 +32,48 @@ services:
     
     restart: unless-stopped
     
-    depends_on:
-      - qbittorrent  # Optional: adjust based on your stack
-      
+    # Health check
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 5s
+    
+    # Portainer labels for UI integration
     labels:
+      # Container details
       - "com.example.description=Spaceship Station Visualizer"
+      - "com.example.version=1.0.0"
+      
+      # Portainer UI settings
+      - "io.portainer.accesscontrol.public=true"
+      - "io.portainer.displayname=Spaceship Station"
+      - "io.portainer.webui.port=0420"
+      - "io.portainer.webui.protocol=http"
+      
+      # Custom groups for Portainer
+      - "io.portainer.group=Monitoring"
+      - "io.portainer.category=monitoring,visualizer,docker-stats"
+
+  # Optional: qBittorrent service (uncomment if needed)
+  # qbittorrent:
+  #   image: linuxserver/qbittorrent:latest
+  #   container_name: qbittorrent
+  #   environment:
+  #     PUID: 1000
+  #     PGID: 1000
+  #     WEBUI_PORT: 8080
+  #   ports:
+  #     - "8080:8080"
+  #     - "6881:6881/tcp"
+  #     - "6881:6881/udp"
+  #   volumes:
+  #     - qbittorrent-config:/config
+  #     - /mnt/downloads:/downloads
+  #   networks:
+  #     - ghostworld
+  #   restart: unless-stopped
 
   # Optional: Ollama service for AI features
   # ollama:
@@ -56,6 +94,9 @@ networks:
 volumes:
   spaceship-tools:
     driver: local
+  
+  # qbittorrent-config:
+  #   driver: local
   
   # ollama-data:
   #   driver: local
