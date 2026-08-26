@@ -29,7 +29,7 @@ services:
       - spaceship-tools:/app/ai_core/tools
     
     networks:
-      - ghostworld
+      - ghost_network
     
     restart: unless-stopped
     
@@ -66,12 +66,12 @@ services:
   #   volumes:
   #     - ollama-data:/root/.ollama
   #   networks:
-  #     - ghostworld
+  #     - ghost_network
   #   restart: unless-stopped
 
 networks:
-  ghostworld:
-    external: true  # Connect to your existing ghostworld network
+  ghost_network:
+    external: true  # Connect to your existing ghostworld stack network
 
 volumes:
   spaceship-tools:
