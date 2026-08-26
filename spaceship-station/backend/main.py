@@ -75,11 +75,11 @@ CONFIG = {
     },
     "media_pools": {
         "movies": {"path": f"{MEDIA_DIRECTORY}/movies", "type": "movies", "enabled": True},
-        "tv": {"path": f"{MEDIA_DIRECTORY}/tv", "type": "tv", "enabled": True},
-        "torrents": {"path": f"{INSTALL_DIRECTORY}/torrents", "type": "torrents", "enabled": True},
-        "downloads": {"path": f"{INSTALL_DIRECTORY}/downloads", "type": "downloads", "enabled": True},
-        "roms": {"path": f"{MEDIA_DIRECTORY}/roms", "type": "roms", "enabled": False},
-        "ebooks": {"path": f"{MEDIA_DIRECTORY}/ebooks", "type": "ebooks", "enabled": False},
+        "tvshows": {"path": f"{MEDIA_DIRECTORY}/tvshows", "type": "tv", "enabled": True},
+        "pcgames": {"path": f"{MEDIA_DIRECTORY}/pcgames", "type": "games", "enabled": True},
+        "roms": {"path": f"{MEDIA_DIRECTORY}/roms", "type": "roms", "enabled": True},
+        "ebooks": {"path": f"{MEDIA_DIRECTORY}/ebooks", "type": "ebooks", "enabled": True},
+        "downloads": {"path": f"{MEDIA_DIRECTORY}/downloads", "type": "downloads", "enabled": True},
     },
     "settings": {
         "theme": "dark",
@@ -842,6 +842,85 @@ async def delete_media_pool(request: Dict[str, Any]):
         "pool": deleted,
         "timestamp": datetime.now().isoformat(),
     }
+
+
+# ============================================================================
+# File Browser Endpoints
+# ============================================================================
+
+@app.get("/api/files/browse")
+async def browse_files(path: str = "/media/MediaPool"):
+    """Browse directory structure for file selection."""
+    from pathlib import Path
+    
+    try:
+        base_path = Path(path)
+        
+        if not base_path.exists():
+            return {"error": f"Path does not exist: {path}"}, 404
+        
+        if not base_path.is_dir():
+            return {"error": f"Path is not a directory: {path}"}, 400
+        
+        # Get all items in directory
+        items = []
+        try:
+            for item in sorted(base_path.iterdir()):
+                if item.is_dir():
+                    try:
+                        file_count = len(list(item.iterdir()))
+                    except (PermissionError, OSError):
+                        file_count = 0
+                    
+                    items.append({
+                        "name": item.name,
+                        "path": str(item),
+                        "type": "directory",
+                        "file_count": file_count,
+                    })
+                elif item.is_file():
+                    items.append({
+                        "name": item.name,
+                        "path": str(item),
+                        "type": "file",
+                        "size": item.stat().st_size,
+                    })
+        except PermissionError:
+            return {"error": "Permission denied reading directory"}, 403
+        
+        return {
+            "current_path": str(base_path),
+            "parent_path": str(base_path.parent) if base_path.parent != base_path else None,
+            "items": items,
+            "timestamp": datetime.now().isoformat(),
+        }
+    
+    except Exception as e:
+        return {"error": str(e)}, 500
+
+
+@app.get("/api/files/validate-path")
+async def validate_path(path: str):
+    """Check if a path exists and is readable."""
+    from pathlib import Path
+    
+    try:
+        target = Path(path)
+        
+        return {
+            "path": path,
+            "exists": target.exists(),
+            "is_directory": target.is_dir(),
+            "is_file": target.is_file(),
+            "readable": target.exists() and (target.is_dir() or target.is_file()),
+            "timestamp": datetime.now().isoformat(),
+        }
+    except Exception as e:
+        return {
+            "path": path,
+            "exists": False,
+            "error": str(e),
+        }
 
 
 # ============================================================================

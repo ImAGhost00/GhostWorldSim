@@ -146,6 +146,23 @@ class SettingsPanel {
                         </div>
                     </div>
 
+                    <!-- Media Pool Browser -->
+                    <div>
+                        <h3 class="text-sm font-bold text-cyan-400 mb-4">📁 MEDIA POOL BROWSER</h3>
+                        
+                        <div id="fileBrowser" class="bg-slate-800 rounded border border-slate-700 p-3 space-y-2">
+                            <div class="text-xs text-slate-400 mb-2">
+                                <div id="currentPath" class="font-mono text-sky-300 mb-2">/media/MediaPool</div>
+                                <button onclick="settingsPanel.browsePath('/media/MediaPool')" class="w-full px-2 py-1 bg-slate-700 hover:bg-slate-600 rounded text-xs mb-2">
+                                    🔄 Refresh
+                                </button>
+                            </div>
+                            <div id="fileList" class="max-h-64 overflow-y-auto space-y-1">
+                                <div class="text-slate-400 text-xs">Loading...</div>
+                            </div>
+                        </div>
+                    </div>
+
                     <!-- Storage Info -->
                     <div class="p-3 bg-slate-800 rounded border border-slate-700 text-xs text-slate-400">
                         <p>💾 Settings are stored locally in configuration</p>
@@ -172,6 +189,78 @@ class SettingsPanel {
             console.error(`Error saving setting ${key}:`, error);
         }
     }
+
+    async browsePath(path) {
+        try {
+            const response = await fetch(`/api/files/browse?path=${encodeURIComponent(path)}`);
+            const data = await response.json();
+            
+            if (response.ok) {
+                this.renderFileBrowser(data);
+            } else {
+                console.error('Browse error:', data.error);
+                document.getElementById('fileList').innerHTML = `<div class="text-red-400 text-xs">${data.error}</div>`;
+            }
+        } catch (error) {
+            console.error('Failed to browse path:', error);
+            document.getElementById('fileList').innerHTML = `<div class="text-red-400 text-xs">Error: ${error.message}</div>`;
+        }
+    }
+
+    renderFileBrowser(data) {
+        const currentPath = document.getElementById('currentPath');
+        const fileList = document.getElementById('fileList');
+        
+        currentPath.textContent = data.current_path;
+        
+        let html = '';
+        
+        // Parent directory link
+        if (data.parent_path) {
+            html += `
+                <div class="p-2 bg-slate-700 hover:bg-slate-600 rounded cursor-pointer" 
+                    onclick="settingsPanel.browsePath('${data.parent_path}')">
+                    <span class="text-sky-400 text-xs">📁 ..</span>
+                </div>
+            `;
+        }
+        
+        // List directories first, then files
+        for (const item of data.items) {
+            if (item.type === 'directory') {
+                html += `
+                    <div class="p-2 bg-slate-700 hover:bg-slate-600 rounded cursor-pointer" 
+                        onclick="settingsPanel.browsePath('${item.path}')">
+                        <div class="flex items-center justify-between">
+                            <span class="text-sky-400 text-xs">📁 ${item.name}</span>
+                            <span class="text-slate-500 text-xs">${item.file_count} items</span>
+                        </div>
+                    </div>
+                `;
+            }
+        }
+        
+        // Then files
+        for (const item of data.items) {
+            if (item.type === 'file') {
+                const sizeKB = (item.size / 1024).toFixed(1);
+                html += `
+                    <div class="p-2 bg-slate-700 rounded">
+                        <div class="flex items-center justify-between">
+                            <span class="text-slate-300 text-xs">📄 ${item.name}</span>
+                            <span class="text-slate-500 text-xs">${sizeKB} KB</span>
+                        </div>
+                    </div>
+                `;
+            }
+        }
+        
+        if (html === '') {
+            html = '<div class="text-slate-400 text-xs">No items found</div>';
+        }
+        
+        fileList.innerHTML = html;
+    }
 }
 
 // Global instance
@@ -196,6 +285,11 @@ function openSettingsPanel() {
                 document.getElementById('intervalDisplay').textContent = e.target.value + 's';
             });
         }
+
+        // Initialize file browser
+        setTimeout(() => {
+            settingsPanel.browsePath('/media/MediaPool');
+        }, 100);
     }
 
     if (overlay) overlay.classList.add('visible');
