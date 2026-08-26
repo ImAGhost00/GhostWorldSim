@@ -209,6 +209,20 @@ class DockerAgent:
             "x": 10, "y": 0,
             "color": "#ec971f"
         },
+        "portainer": {
+            "module_type": "engineering_bay",
+            "name": "Portainer UI",
+            "description": "Docker Management Console",
+            "x": 11, "y": 0,
+            "color": "#13bce7"
+        },
+        "adguard": {
+            "module_type": "network_gateway",
+            "name": "AdGuard DNS",
+            "description": "Network-wide Ad Blocking",
+            "x": 0, "y": 4,
+            "color": "#68bc71"
+        },
     }
 
     def __init__(self, mock_mode: bool = True):

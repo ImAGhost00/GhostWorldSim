@@ -10,7 +10,7 @@ services:
     ports:
       - "4420:8000"
     environment:
-      MOCK_MODE: "false"  # Set to "true" for testing without live Docker
+      MOCK_MODE: "true"  # Switch to "false" once real services are mapped
       ENABLE_AI: "false"  # AI disabled (insufficient VRAM)
       DEBUG: "true"  # Enable debug logging
       OLLAMA_HOST: "http://ollama:11434"  # Link to Ollama container if available

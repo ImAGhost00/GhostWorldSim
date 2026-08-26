@@ -18,7 +18,56 @@ A full-stack web application that visualizes your Docker containers, system metr
 
 ---
 
-## 🏗️ Architecture
+## � Monitored Services
+
+Spaceship Station monitors and controls **28 containerized services** across your GhostWorld stack:
+
+### Service Categories
+- **🎬 Media & Entertainment**: Jellyfin, Seerr, Komga, CWA, Shelfmark, GameyFin, RoMM
+- **📥 Downloading & Indexing**: Sonarr, Radarr, Bazarr, Prowlarr, qBittorrent, Unpackerr, Recyclarr
+- **🖥️ Dashboards**: Homarr, Dashdot, Wizarr
+- **🔐 Authentication**: Authentik (server, worker, DB, Redis), AdGuard
+- **🌐 Networking**: Gluetun, Byparr
+- **⚙️ Management**: Portainer, Watchtower
+
+📖 **Full service documentation**: See [SERVICES.md](./SERVICES.md) for detailed info, ports, and automation examples.
+
+---
+
+## 🚀 Automation & Control
+
+### Discord Bot Integration
+Control your entire stack via Discord:
+```
+!station status              # System overview
+!station containers         # All services
+!station restart jellyfin   # Restart specific service
+!station logs sonarr        # Show logs
+!station help              # All commands
+```
+
+### REST API
+```bash
+# List all services
+curl http://localhost:4420/api/containers
+
+# Restart a service
+curl -X POST http://localhost:4420/api/containers/sonarr/restart
+
+# Get system metrics
+curl http://localhost:4420/api/system
+
+# View torrent status
+curl http://localhost:4420/api/torrents
+```
+
+### Web UI Clicks
+- **Click any module** on the isometric grid to inspect details
+- **View real-time logs** and resource usage
+- **Restart containers** from the inspector panel
+- **Monitor all systems** in one unified dashboard
+
+---
 
 ```
 spaceship-station/
