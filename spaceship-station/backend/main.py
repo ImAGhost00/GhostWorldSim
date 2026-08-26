@@ -5,7 +5,8 @@ FastAPI server with WebSocket streaming for real-time metrics and container stat
 
 import requests
 import asyncio
-from datetime import datetime
+import os
+import json
 from typing import Set, Dict, Any
 from contextlib import asynccontextmanager
 
@@ -36,14 +37,23 @@ from discord_integration import DiscordBotManager
 # Configuration & Initialization
 # ============================================================================
 
+# System Environment
+PUID = os.getenv("PUID", "1000")
+PGID = os.getenv("PGID", "1000")
+TZ = os.getenv("TZ", "UTC")
+MEDIA_DIRECTORY = os.getenv("MEDIA_DIRECTORY", "/media")
+INSTALL_DIRECTORY = os.getenv("INSTALL_DIRECTORY", "/app")
+MEDIA_SERVICE = os.getenv("MEDIA_SERVICE", "jellyfin")
+
+# App Configuration
 MOCK_MODE = os.getenv("MOCK_MODE", "true").lower() == "true"
 ENABLE_AI = os.getenv("ENABLE_AI", "false").lower() == "true"
-BROADCAST_INTERVAL = 2.0  # Seconds between metric broadcasts
+BROADCAST_INTERVAL = float(os.getenv("BROADCAST_INTERVAL", "2.0"))
 
 docker_agent = DockerAgent(mock_mode=MOCK_MODE)
 system_collector = SystemCollector()
 torrent_agent = TorrentAgent(mock_mode=MOCK_MODE)
-file_browser = FileBrowserAgent(mock_mode=MOCK_MODE)
+file_browser = FileBrowserAgent(mock_mode=MOCK_MODE, media_dir=MEDIA_DIRECTORY, install_dir=INSTALL_DIRECTORY)
 ai_gateway = AIAgentGateway() if (AI_AVAILABLE and ENABLE_AI) else None
 discord_bot = DiscordBotManager()
 
@@ -146,6 +156,30 @@ async def health_check():
     }
 
 
+@app.get("/api/system/environment")
+async def get_environment():
+    """Get system environment configuration."""
+    return {
+        "system": {
+            "puid": PUID,
+            "pgid": PGID,
+            "timezone": TZ,
+        },
+        "paths": {
+            "media_directory": MEDIA_DIRECTORY,
+            "install_directory": INSTALL_DIRECTORY,
+        },
+        "services": {
+            "media_service": MEDIA_SERVICE,
+        },
+        "runtime": {
+            "mock_mode": MOCK_MODE,
+            "ai_enabled": ENABLE_AI and AI_AVAILABLE,
+        },
+        "timestamp": datetime.now().isoformat(),
+    }
+
+
 @app.get("/api/status")
 async def system_status():
     """Get detailed system status including features."""
@@ -159,6 +193,18 @@ async def system_status():
             "discord_integration": discord_bot.enabled,
             "file_browsing": True,
             "research_room": True,
+        },
+        "environment": {
+            "system": {
+                "puid": PUID,
+                "pgid": PGID,
+                "timezone": TZ,
+            },
+            "paths": {
+                "media_directory": MEDIA_DIRECTORY,
+                "install_directory": INSTALL_DIRECTORY,
+            },
+            "media_service": MEDIA_SERVICE,
         },
         "discord": discord_bot.get_status(),
         "hardware": {

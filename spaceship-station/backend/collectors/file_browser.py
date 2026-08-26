@@ -12,14 +12,14 @@ import mimetypes
 class FileBrowserAgent:
     """Browse and monitor media pool directories."""
     
-    def __init__(self, mock_mode: bool = False):
-        """Initialize file browser."""
+    def __init__(self, mock_mode: bool = False, media_dir: str = "/media", install_dir: str = "/app"):
+        """Initialize file browser with configurable paths."""
         self.mock_mode = mock_mode
-        # Map friendly names to actual mount paths
+        # Map friendly names to actual mount paths (configurable)
         self.pools = {
-            "media": "/media",
-            "downloads": "/downloads",
-            "torrents": "/torrents",
+            "media": media_dir,
+            "downloads": f"{install_dir}/downloads",
+            "torrents": f"{install_dir}/torrents",
         }
     
     def get_pools(self) -> Dict[str, Dict[str, Any]]:

@@ -1,20 +1,28 @@
 version: '3.8'
 
 services:
-  ghostship:
+  spaceship-station:
     # Build directly from GitHub repository
     build:
       context: https://github.com/ImAGhost00/GhostWorldSim.git#main:spaceship-station
       dockerfile: Dockerfile
-    container_name: ghostship
+    container_name: spaceship-station
     ports:
       - "4420:8000"
     environment:
-      MOCK_MODE: "false"  # Real container monitoring
+      MOCK_MODE: "true"  # Switch to "false" once real services are mapped
       ENABLE_AI: "false"  # AI disabled (insufficient VRAM)
       DEBUG: "true"  # Enable debug logging
       LOG_LEVEL: "debug"  # Verbose logging for troubleshooting
       BROADCAST_INTERVAL: "2.0"
+      
+      # Optional: System environment (customize for your setup)
+      # PUID: "1000"                    # User ID for file permissions
+      # PGID: "1000"                    # Group ID for file permissions
+      # TZ: "America/New_York"          # Timezone
+      # MEDIA_DIRECTORY: "/media"       # Path to media pool
+      # INSTALL_DIRECTORY: "/opt/yams"  # Installation directory
+      # MEDIA_SERVICE: "jellyfin"       # Default media service
     volumes:
       # Mount Docker socket for live container monitoring
       - /var/run/docker.sock:/var/run/docker.sock:ro
@@ -48,7 +56,7 @@ services:
       
       # Portainer UI settings
       - "io.portainer.accesscontrol.public=true"
-      - "io.portainer.displayname=Ghostship"
+      - "io.portainer.displayname=Spaceship Station"
       - "io.portainer.webui.port=4420"
       - "io.portainer.webui.protocol=http"
       
