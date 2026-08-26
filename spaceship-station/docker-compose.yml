@@ -7,7 +7,7 @@ services:
       dockerfile: Dockerfile
     container_name: spaceship-station
     ports:
-      - "8000:8000"
+      - "0420:8000"
     environment:
       MOCK_MODE: "false"  # Set to "true" for testing without live Docker
       OLLAMA_HOST: "http://ollama:11434"  # Link to Ollama container if available

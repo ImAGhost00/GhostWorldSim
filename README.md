@@ -24,7 +24,7 @@ cp .env.example .env
 python main.py
 
 # 5. Open frontend in browser
-# Navigate to http://localhost:8000
+# Navigate to http://localhost:0420
 ```
 
 **Status**: `MOCK_MODE=true` ready for testing, no Docker required.

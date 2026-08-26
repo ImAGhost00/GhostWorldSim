@@ -56,7 +56,7 @@ echo  Starting Spaceship Station Server...
 echo ============================================
 echo.
 echo Mock Mode: !MOCK_MODE!
-echo WebUI: http://localhost:8000
+echo WebUI: http://localhost:0420
 echo.
 echo Press Ctrl+C to stop the server
 echo.

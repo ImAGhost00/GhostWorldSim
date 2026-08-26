@@ -122,7 +122,7 @@ python main.py
 
 **Then open:**
 ```
-http://localhost:8000
+http://localhost:0420
 ```
 
 ### Testing
@@ -131,10 +131,10 @@ http://localhost:8000
 python backend/validate.py
 
 # Health check
-curl http://localhost:8000/api/health
+curl http://localhost:0420/api/health
 
 # List containers
-curl http://localhost:8000/api/containers
+curl http://localhost:0420/api/containers
 ```
 
 ---
@@ -264,19 +264,19 @@ LOG_LEVEL=info
 
 3. **Test Endpoints:**
    ```bash
-   curl http://localhost:8000/api/health
-   curl http://localhost:8000/api/containers
-   curl http://localhost:8000/api/system
+   curl http://localhost:0420/api/health
+   curl http://localhost:0420/api/containers
+   curl http://localhost:0420/api/system
    ```
 
 4. **Test WebSocket (Browser Console):**
    ```javascript
-   ws = new WebSocket('ws://localhost:8000/ws');
+   ws = new WebSocket('ws://localhost:0420/ws');
    ws.onmessage = e => console.log(JSON.parse(e.data));
    ```
 
 5. **Test UI:**
-   - Open http://localhost:8000
+   - Open http://localhost:0420
    - Click modules to inspect
    - Watch metrics update
    - Try AI chat (if Ollama running)
@@ -442,13 +442,13 @@ cd backend && python main.py
 python backend/validate.py
 
 # Health check
-curl http://localhost:8000/api/health
+curl http://localhost:0420/api/health
 ```
 
 ### URLs
-- **Web UI:** http://localhost:8000
-- **API Root:** http://localhost:8000/api
-- **WebSocket:** ws://localhost:8000/ws
+- **Web UI:** http://localhost:0420
+- **API Root:** http://localhost:0420/api
+- **WebSocket:** ws://localhost:0420/ws
 - **Ollama:** http://localhost:11434
 
 ### Files

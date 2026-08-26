@@ -205,7 +205,7 @@ GET /api/discord/status         # Bot connection status
 You can also call these directly:
 
 ```bash
-curl http://localhost:8000/api/discord/status
+curl http://localhost:0420/api/discord/status
 
 # Response:
 {

@@ -106,11 +106,11 @@
   ```
 - [ ] Verify endpoints are reachable:
   ```
-  curl http://localhost:8000/api/health
-  curl http://localhost:8000/api/media/pools
+  curl http://localhost:0420/api/health
+  curl http://localhost:0420/api/media/pools
   ```
 - [ ] Access frontend:
-  - Open `http://localhost:8000` in browser
+  - Open `http://localhost:0420` in browser
   - Verify Research Room loads with real data
 
 ### Production Deployment
