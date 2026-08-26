@@ -56,25 +56,6 @@ services:
       - "io.portainer.group=Monitoring"
       - "io.portainer.category=monitoring,visualizer,docker-stats"
 
-  # Optional: qBittorrent service (uncomment if needed)
-  # qbittorrent:
-  #   image: linuxserver/qbittorrent:latest
-  #   container_name: qbittorrent
-  #   environment:
-  #     PUID: 1000
-  #     PGID: 1000
-  #     WEBUI_PORT: 8080
-  #   ports:
-  #     - "8080:8080"
-  #     - "6881:6881/tcp"
-  #     - "6881:6881/udp"
-  #   volumes:
-  #     - qbittorrent-config:/config
-  #     - /mnt/downloads:/downloads
-  #   networks:
-  #     - ghostworld
-  #   restart: unless-stopped
-
   # Optional: Ollama service for AI features
   # ollama:
   #   image: ollama/ollama:latest
@@ -94,9 +75,6 @@ networks:
 volumes:
   spaceship-tools:
     driver: local
-  
-  # qbittorrent-config:
-  #   driver: local
   
   # ollama-data:
   #   driver: local
