@@ -128,7 +128,7 @@ pip install -r requirements.txt
 python main.py
 ```
 
-Then open: **http://localhost:0420**
+Then open: **http://localhost:4420**
 
 **macOS/Linux:**
 ```bash
@@ -139,7 +139,7 @@ pip install -r requirements.txt
 python main.py
 ```
 
-Then open: **http://localhost:0420**
+Then open: **http://localhost:4420**
 
 ---
 
@@ -374,7 +374,7 @@ Tool is saved to `backend/ai_core/tools/memory_monitor.py` and can be executed v
 ### Immediate (Test the System)
 1. Run `python validate.py` to check dependencies
 2. Start backend with `python main.py`
-3. Open http://localhost:0420 in browser
+3. Open http://localhost:4420 in browser
 4. Click modules to inspect containers
 5. Watch metrics update in real-time
 
@@ -406,7 +406,7 @@ Tool is saved to `backend/ai_core/tools/memory_monitor.py` and can be executed v
 | "No module named 'fastapi'" | Run `pip install -r requirements.txt` |
 | Port 8000 already in use | Change port in `main.py` or close other apps |
 | Docker connection failed | Enable Docker or use `MOCK_MODE=true` |
-| WebSocket shows "OFFLINE" | Verify server running at http://localhost:0420/api/health |
+| WebSocket shows "OFFLINE" | Verify server running at http://localhost:4420/api/health |
 | AI chat not working | Install Ollama and run `ollama serve` |
 
 ---

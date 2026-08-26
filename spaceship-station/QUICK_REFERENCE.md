@@ -70,27 +70,27 @@
 
 ### Get all pools
 ```bash
-curl http://localhost:0420/api/media/pools
+curl http://localhost:4420/api/media/pools
 ```
 
 ### Browse media folder
 ```bash
-curl "http://localhost:0420/api/media/browse?pool=media&path=Movies"
+curl "http://localhost:4420/api/media/browse?pool=media&path=Movies"
 ```
 
 ### Search for files
 ```bash
-curl "http://localhost:0420/api/media/search?pool=media&query=Breaking&max_results=50"
+curl "http://localhost:4420/api/media/search?pool=media&query=Breaking&max_results=50"
 ```
 
 ### Get torrents by category
 ```bash
-curl http://localhost:0420/api/torrents/detailed
+curl http://localhost:4420/api/torrents/detailed
 ```
 
 ### Get specific torrent
 ```bash
-curl http://localhost:0420/api/torrents/mock_torrent_001
+curl http://localhost:4420/api/torrents/mock_torrent_001
 ```
 
 ---

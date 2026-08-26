@@ -8,7 +8,7 @@ services:
       dockerfile: Dockerfile
     container_name: spaceship-station
     ports:
-      - "0420:8000"
+      - "4420:8000"
     environment:
       MOCK_MODE: "false"  # Set to "true" for testing without live Docker
       ENABLE_AI: "false"  # AI disabled (insufficient VRAM)

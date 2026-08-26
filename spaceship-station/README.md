@@ -116,13 +116,13 @@ python main.py
 
 **Expected output:**
 ```
-INFO:     Uvicorn running on http://0.0.0.0:0420
+INFO:     Uvicorn running on http://0.0.0.0:4420
 INFO:     Starting Spaceship Station Visualizer (MOCK_MODE=true)
 ```
 
 ### 2. Open the Web UI
 
-Navigate to: **http://localhost:0420**
+Navigate to: **http://localhost:4420**
 
 You should see:
 - Isometric grid with container modules
@@ -258,7 +258,7 @@ Tools are stored in `backend/ai_core/tools/` and can be executed via:
 
 ```bash
 # In browser console:
-const ws = new WebSocket('ws://localhost:0420/ws');
+const ws = new WebSocket('ws://localhost:4420/ws');
 ws.onmessage = (e) => console.log(JSON.parse(e.data));
 ws.send(JSON.stringify({type: 'ping'}));
 ```
@@ -267,16 +267,16 @@ ws.send(JSON.stringify({type: 'ping'}));
 
 ```bash
 # Health check
-curl http://localhost:0420/api/health
+curl http://localhost:4420/api/health
 
 # Get containers
-curl http://localhost:0420/api/containers
+curl http://localhost:4420/api/containers
 
 # Get system metrics
-curl http://localhost:0420/api/system
+curl http://localhost:4420/api/system
 
 # Query AI
-curl -X POST http://localhost:0420/api/ai/query \
+curl -X POST http://localhost:4420/api/ai/query \
   -H "Content-Type: application/json" \
   -d '{"prompt":"Status report","include_context":true}'
 ```
@@ -376,7 +376,7 @@ Edit `BaseScene.js`:
 ## 🐛 Troubleshooting
 
 ### WebSocket Connection Fails
-- Check server is running: `http://localhost:0420/api/health`
+- Check server is running: `http://localhost:4420/api/health`
 - Browser console should show connection attempts
 - Verify firewall isn't blocking port 8000
 

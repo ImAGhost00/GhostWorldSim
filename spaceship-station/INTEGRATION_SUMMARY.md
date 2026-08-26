@@ -355,8 +355,8 @@ python verify_syntax.py
 ### Phase 2: Backend Testing
 ```bash
 MOCK_MODE=true python backend/main.py
-# Server should start on http://localhost:0420
-curl http://localhost:0420/api/media/pools
+# Server should start on http://localhost:4420
+curl http://localhost:4420/api/media/pools
 # Should return pool data
 ```
 

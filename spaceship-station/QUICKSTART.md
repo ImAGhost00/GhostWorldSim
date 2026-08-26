@@ -41,13 +41,13 @@ python main.py
 
 You should see:
 ```
-INFO:     Uvicorn running on http://0.0.0.0:0420
+INFO:     Uvicorn running on http://0.0.0.0:4420
 INFO:     Starting Spaceship Station Visualizer (MOCK_MODE=true)
 ```
 
 ### Step 4: Open Web UI
 
-Navigate to: **http://localhost:0420**
+Navigate to: **http://localhost:4420**
 
 You should see:
 - ⚓ Header with "SPACESHIP STATION VISUALIZER"
@@ -155,7 +155,7 @@ spaceship-station/
 
 ### Test Health Check
 ```bash
-curl http://localhost:0420/api/health
+curl http://localhost:4420/api/health
 ```
 
 **Response:**
@@ -169,17 +169,17 @@ curl http://localhost:0420/api/health
 
 ### Test Container Listing
 ```bash
-curl http://localhost:0420/api/containers
+curl http://localhost:4420/api/containers
 ```
 
 ### Test System Metrics
 ```bash
-curl http://localhost:0420/api/system
+curl http://localhost:4420/api/system
 ```
 
 ### Test WebSocket in Browser Console
 ```javascript
-const ws = new WebSocket('ws://localhost:0420/ws');
+const ws = new WebSocket('ws://localhost:4420/ws');
 ws.onmessage = (e) => {
     const data = JSON.parse(e.data);
     console.log(data.type, '- Containers:', data.containers.length);
@@ -205,7 +205,7 @@ ws.onmessage = (e) => {
 
 ### WebSocket shows "OFFLINE"
 **Solution:** 
-- Verify server is running: `http://localhost:0420/api/health`
+- Verify server is running: `http://localhost:4420/api/health`
 - Check browser console for errors (F12)
 - Verify firewall isn't blocking port 8000
 
