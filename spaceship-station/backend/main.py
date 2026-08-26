@@ -476,8 +476,14 @@ async def websocket_endpoint(websocket: WebSocket):
 
 # Serve frontend assets
 frontend_path = os.path.join(os.path.dirname(__file__), "frontend")
-if os.path.exists(frontend_path):
-    app.mount("/static", StaticFiles(directory=os.path.join(frontend_path, "assets")), name="static")
+assets_path = os.path.join(frontend_path, "assets")
+
+# Create assets directory if it doesn't exist
+if not os.path.exists(assets_path):
+    os.makedirs(assets_path, exist_ok=True)
+
+if os.path.exists(assets_path):
+    app.mount("/static", StaticFiles(directory=assets_path), name="static")
 
 
 @app.get("/")
