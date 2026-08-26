@@ -47,7 +47,6 @@ venv.bak/
 docker-compose.override.yml
 docker-compose.prod.yml
 docker-compose.local.yml
-docker-compose.*.yml
 
 # AI Tools (generated)
 ai_core/tools/*.py
