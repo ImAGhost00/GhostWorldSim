@@ -497,6 +497,92 @@ async def root():
 
 
 # ============================================================================
+# Configuration Management
+# ============================================================================
+
+CONFIG = {
+    "services": {
+        "jellyfin": {"api_key": "", "url": "", "enabled": False},
+        "sonarr": {"api_key": "", "url": "", "enabled": False},
+        "radarr": {"api_key": "", "url": "", "enabled": False},
+        "prowlarr": {"api_key": "", "url": "", "enabled": False},
+        "qbittorrent": {"username": "", "password": "", "url": "", "enabled": False},
+        "discord": {"bot_token": "", "enabled": False},
+        "ollama": {"url": "", "model": "", "enabled": False},
+    },
+    "settings": {
+        "theme": "dark",
+        "grid_size": "12x12",
+        "update_interval": 2.0,
+        "show_grid_labels": True,
+        "notification_level": "warnings",
+    }
+}
+
+
+@app.get("/api/config/get")
+async def get_config():
+    """Get current configuration (excluding sensitive values for non-admin)."""
+    return {
+        "services": {
+            k: {**v, "api_key": "***" if v.get("api_key") else "", "bot_token": "***" if v.get("bot_token") else "", "password": "***" if v.get("password") else ""}
+            for k, v in CONFIG["services"].items()
+        },
+        "settings": CONFIG["settings"],
+        "timestamp": datetime.now().isoformat(),
+    }
+
+
+@app.post("/api/config/update")
+async def update_config(request: Dict[str, Any]):
+    """Update configuration (requires validation)."""
+    section = request.get("section", "")  # "services" or "settings"
+    key = request.get("key", "")
+    value = request.get("value", None)
+    
+    if section == "settings" and key in CONFIG["settings"]:
+        CONFIG["settings"][key] = value
+        return {
+            "status": "updated",
+            "section": "settings",
+            "key": key,
+            "timestamp": datetime.now().isoformat(),
+        }
+    
+    elif section == "services" and key in CONFIG["services"]:
+        CONFIG["services"][key].update(value)
+        return {
+            "status": "updated",
+            "section": "services",
+            "service": key,
+            "timestamp": datetime.now().isoformat(),
+        }
+    
+    return {"status": "error", "message": "Invalid config path"}, 400
+
+
+@app.post("/api/config/validate-service")
+async def validate_service(request: Dict[str, Any]):
+    """Validate service connectivity."""
+    service_name = request.get("service", "")
+    config = request.get("config", {})
+    
+    # Mock validation - in production, test actual connection
+    if not config:
+        return {"service": service_name, "valid": False, "message": "No configuration provided"}
+    
+    # Simple presence check
+    has_required = all([config.get("url") or config.get("api_key")])
+    
+    return {
+        "service": service_name,
+        "valid": has_required,
+        "message": "Configuration looks valid" if has_required else "Missing required fields",
+        "timestamp": datetime.now().isoformat(),
+    }
+
+
+# ============================================================================
 # Main Entry Point
 # ============================================================================
 

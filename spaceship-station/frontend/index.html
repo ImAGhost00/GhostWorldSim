@@ -176,6 +176,12 @@
                     <button id="researchRoomBtn" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 rounded border border-indigo-400 text-sm font-semibold">
                         🔬 RESEARCH
                     </button>
+                    <button onclick="openSettingsPanel()" class="px-4 py-2 bg-cyan-600 hover:bg-cyan-700 rounded border border-cyan-400 text-sm font-semibold">
+                        ⚙️ SETTINGS
+                    </button>
+                    <button onclick="openAdminPanel()" class="px-4 py-2 bg-amber-700 hover:bg-amber-800 rounded border border-amber-500 text-sm font-semibold">
+                        🔐 ADMIN
+                    </button>
                 </div>
             </div>
         </header>
@@ -360,10 +366,24 @@
         </div>
     </div>
     
+    <!-- Settings Panel Drawer -->
+    <div id="settingsOverlay" class="drawer-overlay" onclick="closeSettingsPanel();"></div>
+    <div id="settingsPanel" class="drawer hud-panel">
+        <div id="settingsPanelContent"></div>
+    </div>
+    
+    <!-- Admin Panel Drawer -->
+    <div id="adminOverlay" class="drawer-overlay" onclick="closeAdminPanel();"></div>
+    <div id="adminPanel" class="drawer hud-panel">
+        <div id="adminPanelContent"></div>
+    </div>
+    
     <!-- Scripts -->
     <script src="/src/main.js"></script>
     <script src="/src/scenes/BaseScene.js"></script>
     <script src="/src/ui/hud.js"></script>
     <script src="/src/ui/research-room.js"></script>
+    <script src="/src/ui/admin-panel.js"></script>
+    <script src="/src/ui/settings-panel.js"></script>
 </body>
 </html>
