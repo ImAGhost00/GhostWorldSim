@@ -65,13 +65,13 @@ active_connections: Set[WebSocket] = set()
 # Define CONFIG after agents are initialized
 CONFIG = {
     "services": {
-        "jellyfin": {"api_key": "", "url": "", "enabled": False},
-        "sonarr": {"api_key": "", "url": "", "enabled": False},
-        "radarr": {"api_key": "", "url": "", "enabled": False},
-        "prowlarr": {"api_key": "", "url": "", "enabled": False},
-        "qbittorrent": {"username": "", "password": "", "url": "", "enabled": False},
+        "jellyfin": {"api_key": "", "url": "http://192.168.69.1:8096", "enabled": True},
+        "sonarr": {"api_key": "", "url": "http://192.168.69.1:8989", "enabled": True},
+        "radarr": {"api_key": "", "url": "http://192.168.69.1:7878", "enabled": True},
+        "prowlarr": {"api_key": "", "url": "http://192.168.69.1:9696", "enabled": True},
+        "qbittorrent": {"username": "admin", "password": "", "url": "http://192.168.69.1:6080", "enabled": True},
         "discord": {"bot_token": "", "enabled": False},
-        "ollama": {"url": "", "model": "", "enabled": False},
+        "ollama": {"url": "http://192.168.69.1:11434", "model": "", "enabled": False},
     },
     "media_pools": {
         "movies": {"path": f"{MEDIA_DIRECTORY}/movies", "type": "movies", "enabled": True},
@@ -572,6 +572,7 @@ async def websocket_endpoint(websocket: WebSocket):
 # Serve frontend assets
 frontend_path = os.path.join(os.path.dirname(__file__), "frontend")
 assets_path = os.path.join(frontend_path, "assets")
+src_path = os.path.join(frontend_path, "src")
 
 # Create assets directory if it doesn't exist
 if not os.path.exists(assets_path):
@@ -579,6 +580,10 @@ if not os.path.exists(assets_path):
 
 if os.path.exists(assets_path):
     app.mount("/static", StaticFiles(directory=assets_path), name="static")
+
+# Mount src directory for JavaScript files
+if os.path.exists(src_path):
+    app.mount("/src", StaticFiles(directory=src_path), name="src")
 
 
 @app.get("/")
