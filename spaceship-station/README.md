@@ -50,10 +50,22 @@ spaceship-station/
 
 ### Prerequisites
 
-- **Python 3.10+**
-- **Node.js / Browser** (for frontend)
+- **Python 3.8+** (3.10+ recommended)
+- **Web Browser** (modern, with WebSocket support)
 - **Docker** (optional; app works in mock mode without it)
-- **Ollama** (optional; required for AI features)
+
+### ⚠️ Important Notes for Your Hardware
+
+**AI Features**: Currently **DISABLED** by default
+- Your GTX 1070 (4GB VRAM) is insufficient for real-time Ollama inference
+- Keep `ENABLE_AI=false` in `.env`
+- Use **Discord integration** instead for server control
+
+**Discord Bot** (Recommended): ✅ Available
+- Set up with `DISCORD_BOT_TOKEN` in `.env`
+- Control server via `!station` commands in Discord
+- Get approval via Discord reactions
+- No resource overhead
 
 ### Backend Setup
 
@@ -76,8 +88,10 @@ spaceship-station/
 
 3. **Set environment variables** (create `.env` file in backend/):
    ```bash
-   MOCK_MODE=true              # Set to 'false' to connect to live Docker
-   OLLAMA_HOST=http://localhost:11434
+   MOCK_MODE=true              # Set to 'false' for live Docker monitoring
+   ENABLE_AI=false             # Keep disabled (hardware constraints)
+   DISCORD_BOT_TOKEN=          # Optional: set your Discord bot token
+   QBITTORRENT_HOST=localhost:8080
    QBITTORRENT_HOST=http://localhost:8080
    ```
 

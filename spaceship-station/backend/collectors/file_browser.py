@@ -422,3 +422,44 @@ class FileBrowserAgent:
             "success": False,
             "error": f"Unknown pool: {pool}",
         }
+    
+    def _get_mock_search_results(self, pool: str, query: str, max_results: int = 50) -> Dict[str, Any]:
+        """Return mock search results."""
+        # All available files across pools
+        all_files = {
+            "media": [
+                {"name": "Inception.2010.1080p.BluRay.mkv", "type": "file", "size_mb": 4500.5},
+                {"name": "Interstellar.2014.1080p.BluRay.mkv", "type": "file", "size_mb": 5200.3},
+                {"name": "Matrix.1999.1080p.BluRay.mkv", "type": "file", "size_mb": 3800.0},
+                {"name": "Breaking.Bad.Complete", "type": "folder"},
+                {"name": "Game.of.Thrones.Complete", "type": "folder"},
+            ],
+            "downloads": [
+                {"name": "ubuntu-22.04-LTS.iso", "type": "file", "size_mb": 3500.0},
+                {"name": "debian-bookworm.iso", "type": "file", "size_mb": 2900.0},
+                {"name": "software", "type": "folder"},
+            ],
+            "torrents": [
+                {"name": "Breaking.Bad.Complete", "type": "folder"},
+                {"name": "Game.of.Thrones.Complete", "type": "folder"},
+                {"name": "RetroGames", "type": "folder"},
+            ],
+        }
+        
+        if pool not in all_files:
+            return {"success": False, "error": f"Unknown pool: {pool}"}
+        
+        query_lower = query.lower()
+        results = [
+            f for f in all_files[pool]
+            if query_lower in f["name"].lower()
+        ][:max_results]
+        
+        return {
+            "success": True,
+            "pool": pool,
+            "query": query,
+            "results": results,
+            "result_count": len(results),
+            "truncated": len(results) >= max_results,
+        }

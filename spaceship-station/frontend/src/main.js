@@ -266,9 +266,34 @@ function updateConnectionStatus(connected) {
  * Setup UI event listeners
  */
 function setupUIListeners() {
-    document.getElementById('aiChatBtn').addEventListener('click', () => {
-        openAIChat();
-    });
+    const aiBtn = document.getElementById('aiChatBtn');
+    
+    // Check if AI is available
+    fetch('/api/status')
+        .then(r => r.json())
+        .then(data => {
+            if (data.features.ai_core) {
+                aiBtn.addEventListener('click', openAIChat);
+            } else {
+                // Disable AI button if AI is not enabled
+                aiBtn.disabled = true;
+                aiBtn.title = 'AI Core disabled (insufficient VRAM). Use Discord for server control.';
+                aiBtn.style.opacity = '0.5';
+                aiBtn.style.cursor = 'not-allowed';
+                
+                // Replace click handler with info message
+                aiBtn.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    alert('AI Core is currently disabled.\n\nUse Discord integration for server control:\n!station status\n!station containers\n!station help');
+                });
+            }
+            
+            // Show Discord status if enabled
+            if (data.features.discord_integration) {
+                console.log('Discord integration available');
+            }
+        })
+        .catch(e => console.error('Error checking system status:', e));
 }
 
 /**

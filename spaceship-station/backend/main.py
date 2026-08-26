@@ -20,7 +20,17 @@ from collectors.docker_agent import DockerAgent
 from collectors.system import SystemCollector
 from collectors.torrent_agent import TorrentAgent
 from collectors.file_browser import FileBrowserAgent
-from ai_core.agent_gateway import AIAgentGateway
+
+# Optional AI import (graceful degradation if not available)
+try:
+    from ai_core.agent_gateway import AIAgentGateway
+    AI_AVAILABLE = True
+except ImportError:
+    AI_AVAILABLE = False
+    AIAgentGateway = None
+
+# Discord integration
+from discord_integration import DiscordBotManager
 
 
 # ============================================================================
@@ -28,13 +38,15 @@ from ai_core.agent_gateway import AIAgentGateway
 # ============================================================================
 
 MOCK_MODE = os.getenv("MOCK_MODE", "true").lower() == "true"
+ENABLE_AI = os.getenv("ENABLE_AI", "false").lower() == "true"
 BROADCAST_INTERVAL = 2.0  # Seconds between metric broadcasts
 
 docker_agent = DockerAgent(mock_mode=MOCK_MODE)
 system_collector = SystemCollector()
 torrent_agent = TorrentAgent(mock_mode=MOCK_MODE)
 file_browser = FileBrowserAgent(mock_mode=MOCK_MODE)
-ai_gateway = AIAgentGateway()
+ai_gateway = AIAgentGateway() if (AI_AVAILABLE and ENABLE_AI) else None
+discord_bot = DiscordBotManager()
 
 # Track active WebSocket connections for broadcasting
 active_connections: Set[WebSocket] = set()
@@ -127,8 +139,68 @@ async def health_check():
     return {
         "status": "online",
         "mock_mode": MOCK_MODE,
+        "ai_enabled": ENABLE_AI and AI_AVAILABLE,
+        "discord_enabled": discord_bot.enabled,
         "timestamp": datetime.now().isoformat(),
     }
+
+
+@app.get("/api/status")
+async def system_status():
+    """Get detailed system status including features."""
+    return {
+        "status": "online",
+        "features": {
+            "monitoring": True,
+            "container_management": True,
+            "torrent_tracking": True,
+            "ai_core": ENABLE_AI and AI_AVAILABLE,
+            "discord_integration": discord_bot.enabled,
+            "file_browsing": True,
+            "research_room": True,
+        },
+        "discord": discord_bot.get_status(),
+        "hardware": {
+            "mock_mode": MOCK_MODE,
+            "note": "Running in MOCK_MODE - set MOCK_MODE=false to connect to live Docker"
+        },
+        "timestamp": datetime.now().isoformat(),
+    }
+
+
+@app.post("/api/control/request")
+async def request_system_control(request_body: Dict[str, Any]):
+    """Request approval for system control action via Discord."""
+    action = request_body.get("action", "unknown")
+    details = request_body.get("details", "")
+    request_id = request_body.get("request_id", "manual")
+    
+    if not discord_bot.enabled:
+        # In mock mode or without Discord, auto-approve
+        return {
+            "request_id": request_id,
+            "status": "approved",
+            "method": "auto_approved",
+            "reason": "Discord not configured - auto-approving",
+            "timestamp": datetime.now().isoformat(),
+        }
+    
+    # Request approval from Discord
+    approval_message = f"**{action}**\n{details}\n\nUse `!station approve {request_id}` to approve"
+    
+    return {
+        "request_id": request_id,
+        "status": "pending",
+        "method": "discord_approval",
+        "message": approval_message,
+        "timestamp": datetime.now().isoformat(),
+    }
+
+
+@app.get("/api/discord/status")
+async def discord_status():
+    """Get Discord bot connection status."""
+    return discord_bot.get_status()
 
 
 @app.get("/api/containers")
@@ -256,6 +328,13 @@ async def get_media_types(pool: str):
 @app.post("/api/ai/query")
 async def query_ai(request: Dict[str, Any]):
     """Query the AI agent with optional context."""
+    if not ai_gateway:
+        return {
+            "error": "AI is currently disabled. Set ENABLE_AI=true to use this feature.",
+            "hardware_note": "AI features require significant GPU/RAM. Current system may not support real-time inference.",
+            "alternative": "Use Discord bot for server commands instead.",
+        }, 503
+    
     prompt = request.get("prompt", "Status report")
     include_context = request.get("include_context", False)
     
@@ -278,7 +357,16 @@ async def query_ai(request: Dict[str, Any]):
 @app.get("/api/ai/models")
 async def get_ai_models():
     """List available AI models."""
+    if not ai_gateway:
+        return {
+            "status": "disabled",
+            "reason": "AI features are disabled (ENABLE_AI=false)",
+            "available_models": [],
+            "current_model": None,
+        }
+    
     return {
+        "status": "enabled",
         "available_models": ai_gateway.list_available_models(),
         "current_model": ai_gateway.model,
     }
@@ -287,6 +375,13 @@ async def get_ai_models():
 @app.post("/api/ai/tool/generate")
 async def generate_ai_tool(request: Dict[str, Any]):
     """Generate a new AI tool."""
+    if not ai_gateway:
+        return {
+            "error": "AI is disabled",
+            "success": False,
+            "timestamp": datetime.now().isoformat(),
+        }, 503
+    
     tool_spec = request.get("tool_spec", {})
     success = ai_gateway.generate_tool(tool_spec)
     return {
@@ -299,12 +394,26 @@ async def generate_ai_tool(request: Dict[str, Any]):
 @app.get("/api/ai/tools")
 async def get_ai_tools():
     """Get status of all AI tools."""
+    if not ai_gateway:
+        return {
+            "status": "disabled",
+            "tools": [],
+            "message": "AI features are currently disabled",
+        }
+    
     return ai_gateway.get_tool_status()
 
 
 @app.post("/api/ai/tool/{tool_name}/execute")
 async def execute_ai_tool(tool_name: str, request: Dict[str, Any]):
     """Execute a generated AI tool."""
+    if not ai_gateway:
+        return {
+            "error": "AI is disabled",
+            "tool_name": tool_name,
+            "timestamp": datetime.now().isoformat(),
+        }, 503
+    
     args = request.get("args", {})
     result = ai_gateway.execute_tool(tool_name, args)
     return {
