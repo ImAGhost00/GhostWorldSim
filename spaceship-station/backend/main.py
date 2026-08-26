@@ -7,11 +7,12 @@ import requests
 import asyncio
 import os
 import json
+import secrets
 from datetime import datetime
 from typing import Set, Dict, Any
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI, WebSocket, WebSocketDisconnect, HTTPException
+from fastapi import FastAPI, WebSocket, WebSocketDisconnect, HTTPException, Response, Cookie
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
@@ -61,6 +62,10 @@ discord_bot = DiscordBotManager()
 
 # Track active WebSocket connections for broadcasting
 active_connections: Set[WebSocket] = set()
+
+# Track valid admin session tokens (in-memory; cleared on restart)
+admin_sessions: Set[str] = set()
+SESSION_COOKIE_NAME = "station_admin_session"
 
 # Define CONFIG after agents are initialized
 CONFIG = {
@@ -190,8 +195,8 @@ async def health_check():
 
 
 @app.post("/api/auth/validate")
-async def validate_auth(request: Dict[str, Any]):
-    """Validate admin password."""
+async def validate_auth(request: Dict[str, Any], response: Response):
+    """Validate admin password and issue a session cookie on success."""
     provided_password = request.get("password", "")
     
     # If no password is set, allow access
@@ -200,10 +205,42 @@ async def validate_auth(request: Dict[str, Any]):
     
     # Check if password matches
     is_valid = provided_password == ADMIN_PASSWORD
+    
+    if is_valid:
+        # Issue a new session token and set it as an httponly cookie
+        token = secrets.token_urlsafe(32)
+        admin_sessions.add(token)
+        response.set_cookie(
+            key=SESSION_COOKIE_NAME,
+            value=token,
+            httponly=True,
+            samesite="lax",
+            max_age=60 * 60 * 24 * 7,  # 7 days
+        )
+    
     return {
         "authenticated": is_valid,
         "message": "Access granted" if is_valid else "Invalid password",
     }
+
+
+@app.get("/api/auth/check")
+async def check_auth(station_admin_session: str = Cookie(default=None)):
+    """Check if the current session cookie is a valid admin session."""
+    if not ADMIN_PASSWORD:
+        return {"authenticated": True, "message": "No password required"}
+    
+    is_valid = bool(station_admin_session) and station_admin_session in admin_sessions
+    return {"authenticated": is_valid}
+
+
+@app.post("/api/auth/logout")
+async def logout_auth(response: Response, station_admin_session: str = Cookie(default=None)):
+    """Invalidate the current admin session."""
+    if station_admin_session and station_admin_session in admin_sessions:
+        admin_sessions.discard(station_admin_session)
+    response.delete_cookie(SESSION_COOKIE_NAME)
+    return {"status": "logged_out"}
 
 
 @app.get("/api/system/environment")

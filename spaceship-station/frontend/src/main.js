@@ -12,35 +12,85 @@ const maxReconnectAttempts = 5;
 const reconnectDelay = 3000;
 
 /**
+ * Show a visible error banner at the top of the page.
+ * This makes runtime errors visible even without opening dev tools.
+ */
+function showErrorBanner(message) {
+    let banner = document.getElementById('globalErrorBanner');
+    if (!banner) {
+        banner = document.createElement('div');
+        banner.id = 'globalErrorBanner';
+        banner.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:9999;background:#7f1d1d;color:#fecaca;padding:10px 16px;font-family:monospace;font-size:12px;max-height:30vh;overflow-y:auto;border-bottom:2px solid #ef4444;';
+        document.body.prepend(banner);
+    }
+    const line = document.createElement('div');
+    line.textContent = `⚠ ${message}`;
+    banner.appendChild(line);
+}
+
+// Catch any uncaught errors so a blank page always shows *something*
+window.addEventListener('error', (event) => {
+    console.error('Uncaught error:', event.error || event.message);
+    showErrorBanner(event.message || 'Unknown script error');
+});
+window.addEventListener('unhandledrejection', (event) => {
+    console.error('Unhandled promise rejection:', event.reason);
+    showErrorBanner(`Promise error: ${event.reason?.message || event.reason}`);
+});
+
+/**
  * Initialize the application
  */
 function initializeApp() {
     console.log('🚀 Initializing Spaceship Station Visualizer');
     
-    // Determine WebSocket URL
-    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-    wsUrl = `${protocol}//${window.location.host}/ws`;
-    console.log('WebSocket URL:', wsUrl);
-    
-    // Initialize Phaser game
-    initializePhaser();
-    
-    // Connect to WebSocket
-    connectWebSocket();
-    
-    // Setup UI event listeners
-    setupUIListeners();
+    try {
+        // Determine WebSocket URL
+        const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+        wsUrl = `${protocol}//${window.location.host}/ws`;
+        console.log('WebSocket URL:', wsUrl);
+        
+        // Initialize Phaser game
+        initializePhaser();
+        
+        // Connect to WebSocket
+        connectWebSocket();
+        
+        // Setup UI event listeners
+        setupUIListeners();
+    } catch (err) {
+        console.error('Failed to initialize app:', err);
+        showErrorBanner(`Initialization failed: ${err.message}`);
+    }
 }
 
 /**
  * Initialize Phaser 3 game
  */
 function initializePhaser() {
+    if (typeof Phaser === 'undefined') {
+        showErrorBanner('Phaser failed to load from CDN. Check your internet connection or CDN access.');
+        const container = document.getElementById('gameContainer');
+        if (container) {
+            container.innerHTML = '<div class="flex items-center justify-center h-full text-red-400 text-sm p-8">⚠ Phaser engine failed to load (CDN blocked?). The room visualization cannot render.</div>';
+        }
+        return;
+    }
+    if (typeof BaseScene === 'undefined') {
+        showErrorBanner('BaseScene failed to load. /src/scenes/BaseScene.js may not be reachable.');
+        return;
+    }
+
+    const container = document.getElementById('gameContainer');
+    const width = Math.max(container?.clientWidth || window.innerWidth - 320, 320);
+    const height = Math.max(container?.clientHeight || window.innerHeight - 80, 240);
+
     const config = {
         type: Phaser.AUTO,
-        width: window.innerWidth - 320, // Account for sidebar
-        height: window.innerHeight - 80, // Account for header
+        width,
+        height,
         parent: 'gameContainer',
+        backgroundColor: '#0f172a',
         render: {
             pixelArt: false,
             antialias: true,
@@ -59,6 +109,15 @@ function initializePhaser() {
     game.events.on('ready', () => {
         scene = game.scene.getScene('BaseScene');
         console.log('✓ Phaser scene ready');
+    });
+
+    // Keep canvas sized to its container on window resize
+    window.addEventListener('resize', () => {
+        if (!game) return;
+        const c = document.getElementById('gameContainer');
+        if (c) {
+            game.scale.resize(c.clientWidth, c.clientHeight);
+        }
     });
 }
 
@@ -266,30 +325,13 @@ function updateConnectionStatus(connected) {
  * Setup UI event listeners
  */
 function setupUIListeners() {
-    const aiBtn = document.getElementById('aiChatBtn');
-    
-    // Check if AI is available
+    // The AI Core button was removed from the header (AI disabled by default).
+    // Keep this as a no-op status check so we don't break if it's re-added later.
     fetch('/api/status')
         .then(r => r.json())
         .then(data => {
-            if (data.features.ai_core) {
-                aiBtn.addEventListener('click', openAIChat);
-            } else {
-                // Disable AI button if AI is not enabled
-                aiBtn.disabled = true;
-                aiBtn.title = 'AI Core disabled (insufficient VRAM). Use Discord for server control.';
-                aiBtn.style.opacity = '0.5';
-                aiBtn.style.cursor = 'not-allowed';
-                
-                // Replace click handler with info message
-                aiBtn.addEventListener('click', (e) => {
-                    e.preventDefault();
-                    alert('AI Core is currently disabled.\n\nUse Discord integration for server control:\n!station status\n!station containers\n!station help');
-                });
-            }
-            
             // Show Discord status if enabled
-            if (data.features.discord_integration) {
+            if (data.features && data.features.discord_integration) {
                 console.log('Discord integration available');
             }
         })

@@ -4,12 +4,28 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Spaceship Station Visualizer</title>
+
+    <!-- Early error banner: works even if later scripts fail to load -->
+    <script>
+        window.__earlyErrors = [];
+        window.addEventListener('error', function (e) {
+            window.__earlyErrors.push(e.message);
+        });
+        function __showBootError(msg) {
+            document.addEventListener('DOMContentLoaded', function () {
+                var banner = document.createElement('div');
+                banner.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:9999;background:#7f1d1d;color:#fecaca;padding:10px 16px;font-family:monospace;font-size:12px;border-bottom:2px solid #ef4444;';
+                banner.textContent = '⚠ ' + msg;
+                document.body.prepend(banner);
+            });
+        }
+    </script>
     
     <!-- Tailwind CSS -->
-    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.tailwindcss.com" onerror="__showBootError('Tailwind CSS failed to load from CDN - styling will be broken.')"></script>
     
     <!-- Phaser 3 -->
-    <script src="https://cdn.jsdelivr.net/npm/phaser@3.55.2/dist/phaser.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/phaser@3.55.2/dist/phaser.js" onerror="__showBootError('Phaser engine failed to load from CDN - the room visualization cannot render.')"></script>
     
     <!-- Custom Styles -->
     <style>
@@ -373,11 +389,11 @@
     </div>
     
     <!-- Scripts -->
-    <script src="/src/main.js"></script>
-    <script src="/src/scenes/BaseScene.js"></script>
-    <script src="/src/ui/hud.js"></script>
-    <script src="/src/ui/research-room.js"></script>
-    <script src="/src/ui/admin-panel.js"></script>
-    <script src="/src/ui/settings-panel.js"></script>
+    <script src="/src/main.js" onerror="__showBootError('/src/main.js failed to load (404?). Buttons and visuals will not work.')"></script>
+    <script src="/src/scenes/BaseScene.js" onerror="__showBootError('/src/scenes/BaseScene.js failed to load (404?). Room visualization will not render.')"></script>
+    <script src="/src/ui/hud.js" onerror="__showBootError('/src/ui/hud.js failed to load (404?).')"></script>
+    <script src="/src/ui/research-room.js" onerror="__showBootError('/src/ui/research-room.js failed to load (404?).')"></script>
+    <script src="/src/ui/admin-panel.js" onerror="__showBootError('/src/ui/admin-panel.js failed to load (404?). Admin button will not work.')"></script>
+    <script src="/src/ui/settings-panel.js" onerror="__showBootError('/src/ui/settings-panel.js failed to load (404?). Settings button will not work.')"></script>
 </body>
 </html>

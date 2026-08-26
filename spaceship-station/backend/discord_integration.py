@@ -9,7 +9,7 @@ import logging
 from typing import Dict, Any, Optional
 
 try:
-    import py_cord as discord
+    import discord
     DISCORD_AVAILABLE = True
 except ImportError:
     DISCORD_AVAILABLE = False

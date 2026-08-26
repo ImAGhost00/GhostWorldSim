@@ -35,7 +35,10 @@ class AdminPanel {
                 <!-- Header -->
                 <div class="flex justify-between items-center pb-4 border-b border-slate-700">
                     <h2 class="text-lg font-bold text-amber-400">⚙️ ADMIN PANEL</h2>
-                    <button onclick="closeAdminPanel()" class="text-slate-400 hover:text-slate-200">✕</button>
+                    <div class="flex items-center gap-3">
+                        <button onclick="logoutAdmin()" class="text-xs text-slate-400 hover:text-red-400">🔓 Logout</button>
+                        <button onclick="closeAdminPanel()" class="text-slate-400 hover:text-slate-200">✕</button>
+                    </div>
                 </div>
 
                 <!-- Tabs -->
@@ -535,44 +538,60 @@ class AdminPanel {
 // Global instance
 let adminPanel = null;
 
-function openAdminPanel() {
+function showAdminPanelUI() {
     const overlay = document.getElementById('adminOverlay');
     const panel = document.getElementById('adminPanel');
-    
-    // Show password prompt if not yet authenticated
-    if (!window.adminAuthenticated) {
-        const password = prompt("Enter admin password:");
-        if (password === null) return; // User cancelled
-        
-        // Validate password
-        fetch('/api/auth/validate', {
+    if (overlay) overlay.classList.add('visible');
+    if (panel) panel.classList.add('open');
+
+    if (!adminPanel) {
+        adminPanel = new AdminPanel();
+    } else {
+        adminPanel.loadConfig();
+    }
+}
+
+async function openAdminPanel() {
+    // Already authenticated this session
+    if (window.adminAuthenticated) {
+        showAdminPanelUI();
+        return;
+    }
+
+    // Check for an existing valid session cookie before prompting
+    try {
+        const checkResponse = await fetch('/api/auth/check');
+        const checkData = await checkResponse.json();
+        if (checkData.authenticated) {
+            window.adminAuthenticated = true;
+            showAdminPanelUI();
+            return;
+        }
+    } catch (err) {
+        console.error('Auth check failed:', err);
+    }
+
+    // Prompt for password
+    const password = prompt("Enter admin password:");
+    if (password === null) return; // User cancelled
+
+    try {
+        const response = await fetch('/api/auth/validate', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ password })
-        })
-        .then(r => r.json())
-        .then(data => {
-            if (data.authenticated) {
-                window.adminAuthenticated = true;
-                if (overlay) overlay.classList.add('visible');
-                if (panel) panel.classList.add('open');
-                
-                if (!adminPanel) {
-                    adminPanel = new AdminPanel();
-                }
-            } else {
-                alert("Invalid password");
-            }
-        })
-        .catch(err => alert("Authentication failed"));
-    } else {
-        // Already authenticated
-        if (overlay) overlay.classList.add('visible');
-        if (panel) panel.classList.add('open');
-        
-        if (!adminPanel) {
-            adminPanel = new AdminPanel();
+        });
+        const data = await response.json();
+
+        if (data.authenticated) {
+            window.adminAuthenticated = true;
+            showAdminPanelUI();
+        } else {
+            alert("Invalid password");
         }
+    } catch (err) {
+        console.error('Authentication error:', err);
+        alert("Authentication failed - could not reach server");
     }
 }
 
@@ -582,3 +601,14 @@ function closeAdminPanel() {
     if (overlay) overlay.classList.remove('visible');
     if (panel) panel.classList.remove('open');
 }
+
+async function logoutAdmin() {
+    try {
+        await fetch('/api/auth/logout', { method: 'POST' });
+    } catch (err) {
+        console.error('Logout failed:', err);
+    }
+    window.adminAuthenticated = false;
+    closeAdminPanel();
+}
+

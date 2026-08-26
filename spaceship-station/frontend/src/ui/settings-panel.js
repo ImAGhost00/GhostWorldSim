@@ -266,13 +266,16 @@ class SettingsPanel {
 // Global instance
 let settingsPanel = null;
 
-function openSettingsPanel() {
+async function openSettingsPanel() {
     const overlay = document.getElementById('settingsOverlay');
     const panel = document.getElementById('settingsPanel');
     
     if (!settingsPanel) {
         settingsPanel = new SettingsPanel();
     }
+
+    // Ensure config is loaded before rendering (avoids showing stale defaults)
+    await settingsPanel.loadConfig();
 
     const panelContent = panel?.querySelector('div');
     if (panelContent) {
